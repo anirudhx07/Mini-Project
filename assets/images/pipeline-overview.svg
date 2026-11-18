@@ -1,0 +1,116 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 400" width="100%" height="100%">
+  <defs>
+    <linearGradient id="pipeBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#061A40"/>
+      <stop offset="100%" stop-color="#07225B"/>
+    </linearGradient>
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0353A4" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#061A40" stop-opacity="0.9"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="400" fill="url(#pipeBg)"/>
+
+  <!-- Title -->
+  <text x="40" y="42" font-family="'Segoe UI', Roboto, sans-serif" font-size="20" font-weight="800" fill="#F8FBFF" letter-spacing="2">SKYFORGE END-TO-END COMPUTER VISION &amp; AI PIPELINE</text>
+  <text x="40" y="64" font-family="'Segoe UI', Roboto, sans-serif" font-size="12" font-weight="500" fill="#00F5D4" letter-spacing="1">From Drone Optical Acquisition to Ground-Station Intelligent Telemetry</text>
+
+  <!-- 5 Sequential Pipeline Stages -->
+  <!-- Stage 1 -->
+  <g transform="translate(40, 90)">
+    <rect width="215" height="260" rx="10" fill="url(#cardGrad)" stroke="#0353A4" stroke-width="1.8"/>
+    <circle cx="28" cy="30" r="14" fill="#0353A4" stroke="#00F5D4" stroke-width="2"/>
+    <text x="24" y="35" font-family="'Segoe UI', sans-serif" font-size="12" font-weight="800" fill="#00F5D4">1</text>
+    <text x="52" y="35" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" fill="#F8FBFF">CAMERA CAPTURE</text>
+    <line x1="15" y1="52" x2="200" y2="52" stroke="#00A6FB" stroke-width="1" opacity="0.4"/>
+    <text x="15" y="75" font-family="'Segoe UI', sans-serif" font-size="11" fill="#4CC9F0">• Sensor: OV2640 / CMOS</text>
+    <text x="15" y="95" font-family="'Segoe UI', sans-serif" font-size="11" fill="#4CC9F0">• Resolution: QVGA / VGA</text>
+    <text x="15" y="115" font-family="'Segoe UI', sans-serif" font-size="11" fill="#4CC9F0">• Target: ≥5 FPS stream</text>
+    <text x="15" y="135" font-family="'Segoe UI', sans-serif" font-size="11" fill="#4CC9F0">• Lightweight DMA capture</text>
+    <rect x="15" y="195" width="185" height="45" rx="5" fill="#061A40" stroke="#00A6FB" stroke-width="1"/>
+    <text x="25" y="215" font-family="'Segoe UI', sans-serif" font-size="10" font-weight="600" fill="#00F5D4">OUTPUT: RAW FRAMES</text>
+    <text x="25" y="230" font-family="'Segoe UI', sans-serif" font-size="10" fill="#E2E8F0">Encoded JPEG payload</text>
+  </g>
+
+  <!-- Arrow 1->2 -->
+  <path d="M 265 220 L 285 220" stroke="#00F5D4" stroke-width="2"/>
+  <polygon points="283,216 291,220 283,224" fill="#00F5D4"/>
+
+  <!-- Stage 2 -->
+  <g transform="translate(295, 90)">
+    <rect width="215" height="260" rx="10" fill="url(#cardGrad)" stroke="#00A6FB" stroke-width="1.8"/>
+    <circle cx="28" cy="30" r="14" fill="#0353A4" stroke="#00F5D4" stroke-width="2"/>
+    <text x="24" y="35" font-family="'Segoe UI', sans-serif" font-size="12" font-weight="800" fill="#00F5D4">2</text>
+    <text x="52" y="35" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" fill="#F8FBFF">WI-FI STREAMING</text>
+    <line x1="15" y1="52" x2="200" y2="52" stroke="#00A6FB" stroke-width="1" opacity="0.4"/>
+    <text x="15" y="75" font-family="'Segoe UI', sans-serif" font-size="11" fill="#4CC9F0">• Protocol: UDP / HTTP</text>
+    <text x="15" y="95" font-family="'Segoe UI', sans-serif" font-size="11" fill="#4CC9F0">• Non-blocking socket</text>
+    <text x="15" y="115" font-family="'Segoe UI', sans-serif" font-size="11" fill="#4CC9F0">• Frame buffer ring queue</text>
+    <text x="15" y="135" font-family="'Segoe UI', sans-serif" font-size="11" fill="#4CC9F0">• Drop rate monitoring</text>
+    <rect x="15" y="195" width="185" height="45" rx="5" fill="#061A40" stroke="#00A6FB" stroke-width="1"/>
+    <text x="25" y="215" font-family="'Segoe UI', sans-serif" font-size="10" font-weight="600" fill="#00F5D4">OUTPUT: INGESTED STREAM</text>
+    <text x="25" y="230" font-family="'Segoe UI', sans-serif" font-size="10" fill="#E2E8F0">Decoded NumPy BGR array</text>
+  </g>
+
+  <!-- Arrow 2->3 -->
+  <path d="M 520 220 L 540 220" stroke="#00F5D4" stroke-width="2"/>
+  <polygon points="538,216 546,220 538,224" fill="#00F5D4"/>
+
+  <!-- Stage 3 -->
+  <g transform="translate(550, 90)">
+    <rect width="215" height="260" rx="10" fill="url(#cardGrad)" stroke="#4CC9F0" stroke-width="1.8"/>
+    <circle cx="28" cy="30" r="14" fill="#0353A4" stroke="#00F5D4" stroke-width="2"/>
+    <text x="24" y="35" font-family="'Segoe UI', sans-serif" font-size="12" font-weight="800" fill="#00F5D4">3</text>
+    <text x="52" y="35" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" fill="#F8FBFF">OPENCV PREPROCESS</text>
+    <line x1="15" y1="52" x2="200" y2="52" stroke="#00A6FB" stroke-width="1" opacity="0.4"/>
+    <text x="15" y="75" font-family="'Segoe UI', sans-serif" font-size="11" fill="#4CC9F0">• Bilateral noise filtering</text>
+    <text x="15" y="95" font-family="'Segoe UI', sans-serif" font-size="11" fill="#4CC9F0">• CLAHE contrast boost</text>
+    <text x="15" y="115" font-family="'Segoe UI', sans-serif" font-size="11" fill="#4CC9F0">• Multi-scale edge gradients</text>
+    <text x="15" y="135" font-family="'Segoe UI', sans-serif" font-size="11" fill="#4CC9F0">• Normalized 224x224</text>
+    <rect x="15" y="195" width="185" height="45" rx="5" fill="#061A40" stroke="#00A6FB" stroke-width="1"/>
+    <text x="25" y="215" font-family="'Segoe UI', sans-serif" font-size="10" font-weight="600" fill="#00F5D4">OUTPUT: ENHANCED TENSOR</text>
+    <text x="25" y="230" font-family="'Segoe UI', sans-serif" font-size="10" fill="#E2E8F0">Texture-highlighted input</text>
+  </g>
+
+  <!-- Arrow 3->4 -->
+  <path d="M 775 220 L 795 220" stroke="#00F5D4" stroke-width="2"/>
+  <polygon points="793,216 801,220 793,224" fill="#00F5D4"/>
+
+  <!-- Stage 4 -->
+  <g transform="translate(805, 90)">
+    <rect width="215" height="260" rx="10" fill="url(#cardGrad)" stroke="#00F5D4" stroke-width="2"/>
+    <circle cx="28" cy="30" r="14" fill="#0353A4" stroke="#00F5D4" stroke-width="2"/>
+    <text x="24" y="35" font-family="'Segoe UI', sans-serif" font-size="12" font-weight="800" fill="#00F5D4">4</text>
+    <text x="52" y="35" font-family="'Segoe UI', sans-serif" font-size="13" font-weight="700" fill="#00F5D4">AIML INFERENCE</text>
+    <line x1="15" y1="52" x2="200" y2="52" stroke="#00A6FB" stroke-width="1" opacity="0.4"/>
+    <text x="15" y="75" font-family="'Segoe UI', sans-serif" font-size="11" fill="#00F5D4">Plan A: Camouflage Net</text>
+    <text x="15" y="92" font-family="'Segoe UI', sans-serif" font-size="10" fill="#E2E8F0">COD10K / CAMO segmentation</text>
+    <text x="15" y="112" font-family="'Segoe UI', sans-serif" font-size="11" fill="#FFB703">Plan B: Person Detector</text>
+    <text x="15" y="129" font-family="'Segoe UI', sans-serif" font-size="10" fill="#E2E8F0">Pretrained lightweight model</text>
+    <text x="15" y="152" font-family="'Segoe UI', sans-serif" font-size="11" fill="#4CC9F0">• Ground station latency &lt;500ms</text>
+    <rect x="15" y="195" width="185" height="45" rx="5" fill="#061A40" stroke="#00F5D4" stroke-width="1"/>
+    <text x="25" y="215" font-family="'Segoe UI', sans-serif" font-size="10" font-weight="600" fill="#00F5D4">OUTPUT: PROBABILITY MAP</text>
+    <text x="25" y="230" font-family="'Segoe UI', sans-serif" font-size="10" fill="#E2E8F0">Anomaly mask &amp; scores</text>
+  </g>
+
+  <!-- Arrow 4->5 -->
+  <path d="M 1030 220 L 1050 220" stroke="#00F5D4" stroke-width="2"/>
+  <polygon points="1048,216 1056,220 1048,224" fill="#00F5D4"/>
+
+  <!-- Stage 5 -->
+  <g transform="translate(1060, 90)">
+    <rect width="180" height="260" rx="10" fill="url(#cardGrad)" stroke="#0353A4" stroke-width="1.8"/>
+    <circle cx="28" cy="30" r="14" fill="#0353A4" stroke="#00F5D4" stroke-width="2"/>
+    <text x="24" y="35" font-family="'Segoe UI', sans-serif" font-size="12" font-weight="800" fill="#00F5D4">5</text>
+    <text x="52" y="35" font-family="'Segoe UI', sans-serif" font-size="12" font-weight="700" fill="#F8FBFF">ANNOTATION</text>
+    <line x1="15" y1="52" x2="165" y2="52" stroke="#00A6FB" stroke-width="1" opacity="0.4"/>
+    <text x="12" y="75" font-family="'Segoe UI', sans-serif" font-size="11" fill="#4CC9F0">• Bounding Box</text>
+    <text x="12" y="95" font-family="'Segoe UI', sans-serif" font-size="11" fill="#4CC9F0">• Segmentation Mask</text>
+    <text x="12" y="115" font-family="'Segoe UI', sans-serif" font-size="11" fill="#4CC9F0">• Confidence Score</text>
+    <text x="12" y="135" font-family="'Segoe UI', sans-serif" font-size="11" fill="#4CC9F0">• Heatmap Overlay</text>
+    <rect x="12" y="195" width="156" height="45" rx="5" fill="#061A40" stroke="#00A6FB" stroke-width="1"/>
+    <text x="20" y="215" font-family="'Segoe UI', sans-serif" font-size="10" font-weight="600" fill="#00F5D4">RESULTS &amp; LOGS</text>
+    <text x="20" y="230" font-family="'Segoe UI', sans-serif" font-size="10" fill="#E2E8F0">Saved to results/ folder</text>
+  </g>
+</svg>

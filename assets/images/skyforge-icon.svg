@@ -1,0 +1,67 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <linearGradient id="navyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#061A40"/>
+      <stop offset="50%" stop-color="#0353A4"/>
+      <stop offset="100%" stop-color="#002244"/>
+    </linearGradient>
+    <linearGradient id="electricGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F5D4"/>
+      <stop offset="50%" stop-color="#00A6FB"/>
+      <stop offset="100%" stop-color="#4CC9F0"/>
+    </linearGradient>
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="6" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Background Circle -->
+  <circle cx="256" cy="256" r="240" fill="url(#navyGrad)" stroke="url(#electricGrad)" stroke-width="6"/>
+  <circle cx="256" cy="256" r="215" fill="none" stroke="#4CC9F0" stroke-width="1.5" stroke-dasharray="6 6" opacity="0.6"/>
+
+  <!-- Targeting Reticle Outer Ring -->
+  <circle cx="256" cy="256" r="170" fill="none" stroke="#00F5D4" stroke-width="2" opacity="0.4"/>
+  <path d="M 256 60 L 256 90 M 256 422 L 256 452 M 60 256 L 90 256 M 422 256 L 452 256" stroke="#00F5D4" stroke-width="3" stroke-linecap="round"/>
+
+  <!-- Drone Diagonal Rotor Arms -->
+  <g stroke="url(#electricGrad)" stroke-width="14" stroke-linecap="round">
+    <line x1="130" y1="130" x2="382" y2="382"/>
+    <line x1="382" y1="130" x2="130" y2="382"/>
+  </g>
+
+  <!-- Drone Rotor Pods -->
+  <g fill="#061A40" stroke="#00F5D4" stroke-width="4" filter="url(#glow)">
+    <circle cx="130" cy="130" r="34"/>
+    <circle cx="382" cy="130" r="34"/>
+    <circle cx="130" cy="382" r="34"/>
+    <circle cx="382" cy="382" r="34"/>
+  </g>
+  
+  <!-- Rotor Blades -->
+  <g stroke="#4CC9F0" stroke-width="3" opacity="0.9">
+    <ellipse cx="130" cy="130" rx="24" ry="7" transform="rotate(30 130 130)" fill="none"/>
+    <ellipse cx="382" cy="130" rx="24" ry="7" transform="rotate(-30 382 130)" fill="none"/>
+    <ellipse cx="130" cy="382" rx="24" ry="7" transform="rotate(-30 130 382)" fill="none"/>
+    <ellipse cx="382" cy="382" rx="24" ry="7" transform="rotate(30 382 382)" fill="none"/>
+  </g>
+
+  <!-- Central Fuselage / Aerospace Shield -->
+  <polygon points="256,160 330,220 330,300 256,360 182,300 182,220" fill="#061A40" stroke="url(#electricGrad)" stroke-width="5"/>
+
+  <!-- Optical Camera Aperture / AI Eye -->
+  <circle cx="256" cy="256" r="42" fill="#0353A4" stroke="#00F5D4" stroke-width="4"/>
+  <circle cx="256" cy="256" r="26" fill="#00A6FB"/>
+  <circle cx="256" cy="256" r="12" fill="#00F5D4" filter="url(#glow)"/>
+  <circle cx="262" cy="250" r="5" fill="#F8FBFF"/>
+
+  <!-- Aerospace HUD Wing Flairs -->
+  <path d="M 182 256 L 140 256 L 110 275" fill="none" stroke="#00F5D4" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+  <path d="M 330 256 L 372 256 L 402 275" fill="none" stroke="#00F5D4" stroke-width="3" stroke-linecap="round" opacity="0.7"/>
+
+  <!-- HUD Reticle Corner Brackets -->
+  <path d="M 220 200 L 200 200 L 200 220" fill="none" stroke="#00F5D4" stroke-width="3" stroke-linecap="round"/>
+  <path d="M 292 200 L 312 200 L 312 220" fill="none" stroke="#00F5D4" stroke-width="3" stroke-linecap="round"/>
+  <path d="M 200 292 L 200 312 L 220 312" fill="none" stroke="#00F5D4" stroke-width="3" stroke-linecap="round"/>
+  <path d="M 312 292 L 312 312 L 292 312" fill="none" stroke="#00F5D4" stroke-width="3" stroke-linecap="round"/>
+</svg>

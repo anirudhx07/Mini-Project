@@ -1,0 +1,14 @@
+Item,Component,Designator,Quantity,Category,Interface,Status,Notes
+1,ESP32 Development Board,U1,1,Microcontroller,GPIO / Wi-Fi,Selected,Main flight controller
+2,ESP32 Development Board,U2,1,Microcontroller,GPIO / ESP-NOW,Selected,Ground remote transmitter
+3,MPU6050 6-DoF IMU,U3,1,Sensor,I2C Fast Mode,Selected,Attitude & orientation measurement
+4,Coreless Brushed Motors (716/720/8520),M1-M4,4,Propulsion,PWM High-Current,Sizing in progress,Matched set (2 CW 2 CCW)
+5,Matched Propellers 55-65mm,P1-P4,4,Propulsion,Press-fit,Sizing in progress,Balanced torque profile
+6,N-Channel MOSFETs (SI2302),Q1-Q4,4,Driver,PWM Low-Side,Specified,RDS(on) < 40mOhm
+7,Schottky Flyback Diodes (1N5819),D1-D4,4,Protection,Parallel Motor,Specified,Clamps inductive kickback
+8,1S Li-Po Battery (3.7V 380-500mAh),BAT1,2,Power,JST 2.0 / Molex,Sizing in progress,Min 25C continuous discharge
+9,Compact Camera Module (OV2640),CAM1,1,Vision,DVP 8-bit,Under evaluation,Weight & texture quality evaluation
+10,Micro-Quadcopter Frame,FRAME1,1,Mechanical,Chassis,Modeled,120mm span 3.0mm thickness (PETG)
+11,2-Axis Analog Joysticks,JS1-JS2,2,Remote,Analog ADC,Selected,Throttle/Yaw & Pitch/Roll
+12,Pull-down Resistors (10k Ohm),R1-R4,4,Passive,Through-Hole / SMD,Specified,Gate grounding on boot
+13,Decoupling Capacitor (100uF Low-ESR),C1,1,Passive,Power Rail,Specified,PWM noise suppression

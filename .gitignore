@@ -1,0 +1,62 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C / C++ / PlatformIO / Arduino build outputs
+.pio/
+.pioenvs/
+.piolibdeps/
+*.hex
+*.bin
+*.elf
+*.o
+*.obj
+*.d
+
+# Virtual Environments
+venv/
+.venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.pytest_cache/
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# IDE and Editor settings
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Machine Learning Checkpoints, Large Datasets and Logs
+*.pt
+*.pth
+*.onnx
+*.tflite
+*.h5
+ml/datasets/raw/
+ml/datasets/COD10K/
+ml/datasets/CAMO/
+ml/datasets/own_terrain/
+ground_station/results/*.jpg
+ground_station/results/*.png
+!ground_station/results/.gitkeep
+ground_station/logs/*.log
+ground_station/logs/*.csv
+!ground_station/logs/.gitkeep
+
+# Sensitive Local Configurations (Wi-Fi passwords, IP addresses)
+firmware/**/secrets.h
+ground_station/config/secrets.json
+.env
+
+# OpenSCAD backup files
+*.scad~
+*.stl~
+*.bak

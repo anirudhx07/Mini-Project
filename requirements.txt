@@ -1,0 +1,22 @@
+# SkyForge: AI-Assisted ESP32 Tiny Drone with Camouflage Image Processing
+# Ground-Station Python Environment Requirements
+
+# Core Numeric & Scientific
+numpy>=1.24.0,<3.0.0
+scipy>=1.11.0
+
+# Computer Vision & Image Processing
+opencv-python>=4.8.0
+Pillow>=10.0.0
+
+# Machine Learning & Deep Learning Frameworks
+torch>=2.0.0
+torchvision>=0.15.0
+scikit-learn>=1.3.0
+
+# Configuration & Utilities
+PyYAML>=6.0
+tqdm>=4.66.0
+
+# Testing & Quality Assurance
+pytest>=7.4.0

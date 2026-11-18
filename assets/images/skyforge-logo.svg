@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 220" width="100%" height="100%">
+  <defs>
+    <linearGradient id="logoNavyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#061A40"/>
+      <stop offset="100%" stop-color="#0353A4"/>
+    </linearGradient>
+    <linearGradient id="logoTextGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#F8FBFF"/>
+      <stop offset="40%" stop-color="#4CC9F0"/>
+      <stop offset="80%" stop-color="#00F5D4"/>
+      <stop offset="100%" stop-color="#00A6FB"/>
+    </linearGradient>
+    <linearGradient id="electricGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00F5D4"/>
+      <stop offset="100%" stop-color="#00A6FB"/>
+    </linearGradient>
+    <filter id="glow2" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Background Card -->
+  <rect x="5" y="5" width="950" height="210" rx="20" fill="#061A40" stroke="#0353A4" stroke-width="2"/>
+  <rect x="15" y="15" width="930" height="190" rx="16" fill="none" stroke="#00A6FB" stroke-width="1" stroke-dasharray="10 5" opacity="0.3"/>
+
+  <!-- Icon Section (Left) -->
+  <g transform="translate(30, 15) scale(0.37)">
+    <circle cx="256" cy="256" r="235" fill="url(#logoNavyGrad)" stroke="url(#electricGrad2)" stroke-width="7"/>
+    <circle cx="256" cy="256" r="210" fill="none" stroke="#4CC9F0" stroke-width="2" stroke-dasharray="8 8" opacity="0.6"/>
+    
+    <path d="M 256 60 L 256 95 M 256 417 L 256 452 M 60 256 L 95 256 M 417 256 L 452 256" stroke="#00F5D4" stroke-width="4" stroke-linecap="round"/>
+
+    <g stroke="url(#electricGrad2)" stroke-width="16" stroke-linecap="round">
+      <line x1="130" y1="130" x2="382" y2="382"/>
+      <line x1="382" y1="130" x2="130" y2="382"/>
+    </g>
+
+    <g fill="#061A40" stroke="#00F5D4" stroke-width="5" filter="url(#glow2)">
+      <circle cx="130" cy="130" r="34"/>
+      <circle cx="382" cy="130" r="34"/>
+      <circle cx="130" cy="382" r="34"/>
+      <circle cx="382" cy="382" r="34"/>
+    </g>
+
+    <polygon points="256,160 330,220 330,300 256,360 182,300 182,220" fill="#061A40" stroke="url(#electricGrad2)" stroke-width="6"/>
+    
+    <circle cx="256" cy="256" r="40" fill="#0353A4" stroke="#00F5D4" stroke-width="5"/>
+    <circle cx="256" cy="256" r="24" fill="#00A6FB"/>
+    <circle cx="256" cy="256" r="12" fill="#00F5D4" filter="url(#glow2)"/>
+    <circle cx="261" cy="251" r="5" fill="#F8FBFF"/>
+  </g>
+
+  <!-- Divider Line -->
+  <line x1="240" y1="30" x2="240" y2="190" stroke="#00A6FB" stroke-width="2" stroke-dasharray="6 4" opacity="0.5"/>
+
+  <!-- Typography (Right) -->
+  <text x="270" y="82" font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="52" font-weight="900" letter-spacing="5" fill="url(#logoTextGrad)">SKYFORGE</text>
+  
+  <text x="275" y="118" font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="16" font-weight="700" letter-spacing="2.5" fill="#4CC9F0">AI-ASSISTED ESP32 TINY DRONE</text>
+  
+  <text x="275" y="148" font-family="'Segoe UI', Roboto, Helvetica, Arial, sans-serif" font-size="13" font-weight="500" letter-spacing="3" fill="#00F5D4">BEYOND FLIGHT. INTO INTELLIGENT VISION.</text>
+  
+  <!-- Badges -->
+  <rect x="275" y="165" width="140" height="24" rx="5" fill="#0353A4" opacity="0.8"/>
+  <text x="285" y="181" font-family="'Segoe UI', sans-serif" font-size="11" font-weight="600" fill="#F8FBFF" letter-spacing="1">GLA UNIVERSITY</text>
+
+  <rect x="425" y="165" width="105" height="24" rx="5" fill="#0353A4" opacity="0.8"/>
+  <text x="435" y="181" font-family="'Segoe UI', sans-serif" font-size="11" font-weight="600" fill="#00F5D4" letter-spacing="1">TEAM ID: 87</text>
+
+  <rect x="540" y="165" width="130" height="24" rx="5" fill="#0353A4" opacity="0.8"/>
+  <text x="550" y="181" font-family="'Segoe UI', sans-serif" font-size="11" font-weight="600" fill="#4CC9F0" letter-spacing="1">CSE // AIML LAB</text>
+
+  <!-- Technical Reticle Marker in Corner -->
+  <path d="M 915 25 L 935 25 L 935 45" fill="none" stroke="#00F5D4" stroke-width="2"/>
+  <path d="M 935 175 L 935 195 L 915 195" fill="none" stroke="#00F5D4" stroke-width="2"/>
+</svg>
