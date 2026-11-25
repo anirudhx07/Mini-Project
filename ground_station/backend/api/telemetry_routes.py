@@ -38,6 +38,7 @@ def get_serial_status():
 @telemetry_bp.post("/api/serial/connect")
 def connect_serial():
     sr = current_app.extensions["serial_receiver"]
+    tm = current_app.extensions["telemetry_manager"]
     udp = current_app.extensions["udp_receiver"]
     body = request.get_json(silent=True) or {}
 
@@ -56,6 +57,7 @@ def connect_serial():
     current_app.extensions["comm_mode"] = "USB_SERIAL"
 
     ok, msg = sr.connect(port=port, baudrate=baudrate)
+    tm.broadcast_state()
     code = 200 if ok else 409
     return jsonify({
         "ok": ok,
@@ -68,7 +70,9 @@ def connect_serial():
 @telemetry_bp.post("/api/serial/disconnect")
 def disconnect_serial():
     sr = current_app.extensions["serial_receiver"]
+    tm = current_app.extensions["telemetry_manager"]
     sr.disconnect()
+    tm.broadcast_state()
     return jsonify({
         "ok": True,
         "message": "USB Serial disconnected",

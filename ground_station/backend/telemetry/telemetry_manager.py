@@ -13,17 +13,18 @@ STATUS_WAITING = "WAITING_FOR_DATA"
 STATUS_CONNECTED = "CONNECTED"
 STATUS_DISCONNECTED = "DISCONNECTED"
 STATUS_INVALID_PACKET = "INVALID_PACKET"
+STATUS_SENSOR_ERROR = "SENSOR_ERROR"
 
 
 def parse_telemetry_packet(raw_payload: str) -> Tuple[Optional[Dict[str, float]], Optional[str]]:
-    """Parse and validate 8 comma-separated floats: ax, ay, az, gx, gy, gz, pitch, roll."""
+    """Parse and validate 8-field (ax..roll) or 9-field (millis,ax..roll) CSV telemetry."""
     if not raw_payload or not isinstance(raw_payload, str):
         return None, "Empty or non-string payload"
 
     cleaned = raw_payload.strip()
     parts = [p.strip() for p in cleaned.split(",")]
-    if len(parts) != 8:
-        return None, f"Expected 8 fields, got {len(parts)}"
+    if len(parts) not in (8, 9):
+        return None, f"Expected 8 or 9 fields, got {len(parts)}"
 
     try:
         values = [float(p) for p in parts]
@@ -33,15 +34,19 @@ def parse_telemetry_packet(raw_payload: str) -> Tuple[Optional[Dict[str, float]]
     if any(not math.isfinite(v) for v in values):
         return None, "NaN or Inf value in packet"
 
+    # For 9-field packets, first field is device millis (ignored for sensor calculations)
+    sensor_values = values[1:] if len(values) == 9 else values
+
     return {
-        "ax": values[0],
-        "ay": values[1],
-        "az": values[2],
-        "gx": values[3],
-        "gy": values[4],
-        "gz": values[5],
-        "pitch": values[6],
-        "roll": values[7],
+        "ax": sensor_values[0],
+        "ay": sensor_values[1],
+        "az": sensor_values[2],
+        "gx": sensor_values[3],
+        "gy": sensor_values[4],
+        "gz": sensor_values[5],
+        "pitch": sensor_values[6],
+        "roll": sensor_values[7],
+        "field_count": len(values),
     }, None
 
 
@@ -60,6 +65,8 @@ class TelemetryManager:
         self.history_size = int(history_size)
         self._event_logger = event_logger
         self._socketio = socketio
+        self._serial_provider = None
+        self._comm_mode_provider = None
         self.calibration = TelemetryCalibration()
 
         self._demo_mode = False
@@ -80,6 +87,15 @@ class TelemetryManager:
 
     def set_socketio(self, socketio):
         self._socketio = socketio
+
+    def set_serial_provider(self, serial_provider, comm_mode_provider=None):
+        """Attach authoritative serial status and comm_mode providers."""
+        self._serial_provider = serial_provider
+        self._comm_mode_provider = comm_mode_provider
+
+    def broadcast_state(self):
+        """Public helper to broadcast authoritative telemetry + serial state over WebSocket."""
+        self._broadcast_state()
 
     def set_timeout(self, timeout_sec: float):
         with self._lock:
@@ -129,7 +145,12 @@ class TelemetryManager:
                     self._status = STATUS_INVALID_PACKET
                     log_err = True
             if log_err and self._event_logger:
-                self._event_logger.log("ESP32", f"Malformed telemetry packet from {source_ip or 'unknown'}: {err}", level="WARNING")
+                snippet = raw_payload.strip()[:80]
+                self._event_logger.log(
+                    "ESP32",
+                    f"Malformed telemetry packet from {source_ip or 'unknown'}: {err} | raw='{snippet}'",
+                    level="WARNING",
+                )
             return False
 
         cal = self.calibration.apply(parsed["pitch"], parsed["roll"])
@@ -172,7 +193,11 @@ class TelemetryManager:
 
         if became_connected and self._event_logger:
             src_desc = "DEMO SIMULATOR" if is_demo else f"ESP32 ({source_ip or 'UDP'})"
-            self._event_logger.log("ESP32", f"{src_desc} connected and streaming MPU6050 telemetry", level="INFO")
+            self._event_logger.log(
+                "ESP32",
+                f"{src_desc} valid MPU6050 telemetry received ({int(parsed['field_count'])}-field CSV)",
+                level="INFO",
+            )
 
         if should_emit:
             self._broadcast_state()
@@ -208,6 +233,14 @@ class TelemetryManager:
                 self._last_error = reason
         self._broadcast_state()
 
+    def mark_sensor_error(self, reason: str = "MPU6050 sensor initialization or read error"):
+        """Mark sensor error state without claiming MPU6050 is ONLINE."""
+        with self._lock:
+            self._status = STATUS_SENSOR_ERROR
+            self._rate_window.clear()
+            self._last_error = reason
+        self._broadcast_state()
+
     def _compute_rate_hz(self) -> float:
         if len(self._rate_window) < 2:
             return 0.0
@@ -223,10 +256,14 @@ class TelemetryManager:
             age_sec = None
             if self._last_packet_mono is not None:
                 age_sec = round(time.monotonic() - self._last_packet_mono, 2)
-            mpu_status = "DATA RECEIVED" if self._status == STATUS_CONNECTED else (
-                "TIMEOUT" if self._status == STATUS_DISCONNECTED else "WAITING"
+            mpu_status = "ONLINE" if self._status == STATUS_CONNECTED else (
+                "SENSOR_ERROR" if self._status == STATUS_SENSOR_ERROR else (
+                    "BAD_PACKET" if self._status == STATUS_INVALID_PACKET else (
+                        "TIMEOUT" if self._status == STATUS_DISCONNECTED else "WAITING"
+                    )
+                )
             )
-            return {
+            payload = {
                 "status": self._status,
                 "mpu6050_status": mpu_status,
                 "demo_mode": self._demo_mode,
@@ -240,6 +277,30 @@ class TelemetryManager:
                 "calibration": self.calibration.get_offsets(),
                 "data": dict(self._latest) if self._latest is not None else None,
             }
+
+        if self._comm_mode_provider is not None:
+            try:
+                payload["comm_mode"] = self._comm_mode_provider()
+            except Exception:
+                pass
+        if self._serial_provider is not None:
+            try:
+                ser = self._serial_provider()
+                payload["serial"] = {
+                    "connected": bool(ser.get("connected")),
+                    "running": bool(ser.get("running")),
+                    "port": ser.get("port"),
+                    "baudrate": ser.get("baudrate"),
+                    "baud_rate": ser.get("baudrate"),
+                    "last_packet_ts": ser.get("last_packet_ts"),
+                    "last_received_packet": ser.get("last_packet_ts"),
+                    "connection_status": "CONNECTED" if ser.get("connected") else "DISCONNECTED",
+                    "last_error": ser.get("last_error", ""),
+                    "serial_error": ser.get("last_error", ""),
+                }
+            except Exception:
+                pass
+        return payload
 
     def get_history(self, limit: int = 120) -> List[Dict[str, Any]]:
         """Return bounded historical telemetry samples."""

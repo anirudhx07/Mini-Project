@@ -12,6 +12,17 @@ from .telemetry_manager import TelemetryManager
 CP210X_VID = 0x10C4  # 4292
 CP210X_PIDS = {0xEA60, 0xEA70, 0xEA71}
 ALLOWED_BAUDRATES = (9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600)
+BOOTLOADER_PREFIXES = (
+    "ets ",
+    "ts ",
+    "rst:",
+    "configsip:",
+    "clk_drv:",
+    "mode:",
+    "load:",
+    "ho ",
+    "entry ",
+)
 
 
 def list_serial_ports() -> List[Dict[str, Any]]:
@@ -59,6 +70,7 @@ class SerialTelemetryReceiver:
         self._running = False
         self._connected = False
         self._last_error: str = ""
+        self._last_raw_line: str = ""
         self._thread: Optional[threading.Thread] = None
         self._watchdog_thread: Optional[threading.Thread] = None
 
@@ -96,14 +108,16 @@ class SerialTelemetryReceiver:
             self.disconnect()
 
         try:
-            ser = serial.Serial(
-                port=port_clean,
-                baudrate=baud_int,
-                bytesize=serial.EIGHTBITS,
-                parity=serial.PARITY_NONE,
-                stopbits=serial.STOPBITS_ONE,
-                timeout=0.5,
-            )
+            ser = serial.Serial()
+            ser.port = port_clean
+            ser.baudrate = baud_int
+            ser.bytesize = serial.EIGHTBITS
+            ser.parity = serial.PARITY_NONE
+            ser.stopbits = serial.STOPBITS_ONE
+            ser.timeout = 0.5
+            ser.dtr = False
+            ser.rts = False
+            ser.open()
             try:
                 ser.reset_input_buffer()
             except Exception:
@@ -176,6 +190,9 @@ class SerialTelemetryReceiver:
                 self._event_logger.log("ESP32", f"USB Serial disconnected and released ({prev_port})", level="INFO")
 
     def _read_loop(self):
+        rx_buffer = bytearray()
+        max_buf_bytes = 4096
+
         while True:
             with self._lock:
                 if not self._running or self._serial is None:
@@ -184,7 +201,8 @@ class SerialTelemetryReceiver:
                 port_name = self._port
 
             try:
-                raw_bytes = ser.readline()
+                waiting = getattr(ser, "in_waiting", 0)
+                chunk = ser.read(waiting if waiting > 0 else 1) if hasattr(ser, "read") else ser.readline()
             except (serial.SerialException, OSError) as exc:
                 msg = f"Serial connection lost on {port_name}: {exc}"
                 with self._lock:
@@ -204,18 +222,46 @@ class SerialTelemetryReceiver:
             except Exception:
                 continue
 
-            if not raw_bytes:
+            if not chunk:
                 continue
 
-            line = raw_bytes.decode("utf-8", errors="replace").strip()
-            if not line:
+            rx_buffer.extend(chunk)
+            if len(rx_buffer) > max_buf_bytes and b"\n" not in rx_buffer:
+                # Prevent unbounded buffer growth on noisy/unterminated lines
+                rx_buffer.clear()
                 continue
 
-            self.telemetry_manager.ingest_raw_packet(
-                line,
-                source_ip=f"USB:{port_name}",
-                is_demo=False,
-            )
+            while b"\n" in rx_buffer:
+                raw_line, _, rest = rx_buffer.partition(b"\n")
+                rx_buffer = bytearray(rest)
+                line = raw_line.decode("utf-8", errors="replace").strip()
+                if not line:
+                    continue
+
+                with self._lock:
+                    self._last_raw_line = line
+
+                if "," not in line:
+                    print(f"[SERIAL-RAW {port_name}] {line}")
+
+                low = line.lower()
+                if any(low.startswith(pref) for pref in BOOTLOADER_PREFIXES):
+                    continue
+
+                if "MPU ERROR" in line.upper() or "SENSOR_ERROR" in line.upper():
+                    err_msg = "ESP32 reported MPU6050 sensor error — check I2C wiring (SDA=21, SCL=22, 0x68)"
+                    with self._lock:
+                        self._last_error = err_msg
+                    self.telemetry_manager.mark_sensor_error(err_msg)
+                    if self._event_logger:
+                        self._event_logger.log("ESP32", err_msg, level="ERROR")
+                    continue
+
+                self.telemetry_manager.ingest_raw_packet(
+                    line,
+                    source_ip=f"USB:{port_name}",
+                    is_demo=False,
+                )
 
     def _watchdog_loop(self):
         while self.is_running():
@@ -232,5 +278,6 @@ class SerialTelemetryReceiver:
                 "baudrate": self._baudrate,
                 "last_packet_ts": tm_state.get("last_packet_ts"),
                 "last_error": self._last_error,
+                "last_raw_line": self._last_raw_line,
                 "allowed_baudrates": list(ALLOWED_BAUDRATES),
             }

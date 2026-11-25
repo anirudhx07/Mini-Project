@@ -23,6 +23,17 @@ class _FakeSerialPort:
     def __init__(self, lines):
         self._lines = list(lines)
         self.is_open = True
+        self.port = None
+        self.baudrate = 115200
+        self.bytesize = 8
+        self.parity = "N"
+        self.stopbits = 1
+        self.timeout = 0.5
+        self.dtr = False
+        self.rts = False
+
+    def open(self):
+        self.is_open = True
 
     def reset_input_buffer(self):
         pass
@@ -68,7 +79,10 @@ def test_serial_valid_malformed_disconnect_and_reconnect(monkeypatch):
 
     streams = [
         _FakeSerialPort([
-            b"0.12,0.25,9.72,1.20,0.45,0.15,2.40,-1.20\n",
+            b"ts Jul 29 2019 12:21:46\r\n",
+            b"rst:0x1 (POWERON_RESET),boot:0x13 (SPI_FAST_FLASH_BOOT)\r\n",
+            b"configsip: 0, SPIWP:0xee\r\n",
+            b"1050,0.12,0.25,9.72,1.20,0.45,0.15,2.40,-1.20\n",
             b"DEBUG: ignoring malformed line\n",
         ]),
         _FakeSerialPort([

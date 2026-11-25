@@ -98,5 +98,10 @@ def test_websocket_connection():
     ws_client = socketio.test_client(app)
     assert ws_client.is_connected()
     received = ws_client.get_received()
-    assert any(pkt["name"] == "telemetry_update" for pkt in received)
+    tel_pkts = [pkt for pkt in received if pkt["name"] == "telemetry_update"]
+    assert len(tel_pkts) >= 1
+    payload = tel_pkts[0]["args"][0]
+    assert "serial" in payload
+    assert payload["serial"]["connected"] is False
+    assert payload["serial"]["connection_status"] == "DISCONNECTED"
     ws_client.disconnect()

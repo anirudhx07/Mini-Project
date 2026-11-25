@@ -25,10 +25,31 @@ def test_parse_valid_packet():
     assert parsed["az"] == 9.81
     assert parsed["pitch"] == 3.2
     assert parsed["roll"] == -1.1
+    assert parsed["field_count"] == 8
+
+
+def test_parse_valid_9_field_packet_with_millis():
+    parsed, err = parse_telemetry_packet("123456,0.12,-0.34,9.81,1.5,-2.0,0.4,3.2,-1.1\n")
+    assert err is None
+    assert parsed is not None
+    assert parsed["ax"] == 0.12
+    assert parsed["az"] == 9.81
+    assert parsed["gz"] == 0.4
+    assert parsed["pitch"] == 3.2
+    assert parsed["roll"] == -1.1
+    assert parsed["field_count"] == 9
 
 
 def test_parse_invalid_packets():
-    for bad in ["", "1,2,3", "1,2,3,4,5,6,7,abc", "nan,0,0,0,0,0,0,0", "1,2,3,4,5,6,7,8,9"]:
+    for bad in [
+        "",
+        "1,2,3",
+        "1,2,3,4,5,6,7",
+        "1,2,3,4,5,6,7,abc",
+        "100,0.1,0.2,9.8,0,0,0,1.0,xyz",
+        "nan,0,0,0,0,0,0,0",
+        "1,2,3,4,5,6,7,8,9,10",
+    ]:
         parsed, err = parse_telemetry_packet(bad)
         assert parsed is None
         assert err is not None

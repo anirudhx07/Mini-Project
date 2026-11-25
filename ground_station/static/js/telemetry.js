@@ -3,6 +3,7 @@
 window.CockpitTelemetry = {
   maxPoints: 60,
   charts: {},
+  lastSerialStatus: null,
 
   makeChart(canvasId, datasets) {
     const ctx = document.getElementById(canvasId);
@@ -65,6 +66,10 @@ window.CockpitTelemetry = {
     const status = state.status || "WAITING_FOR_DATA";
     const isDemo = Boolean(state.demo_mode);
     const mode = commMode || state.comm_mode || "USB_SERIAL";
+    const activeSerial = serialStatus || state.serial || this.lastSerialStatus;
+    if (serialStatus || state.serial) {
+      this.lastSerialStatus = serialStatus || state.serial;
+    }
 
     // Demo Mode indicators
     document.getElementById("demoBanner")?.classList.toggle("hidden", !isDemo);
@@ -82,7 +87,7 @@ window.CockpitTelemetry = {
     const topMpu = document.getElementById("topMpuStatus");
     const dotMpu = document.getElementById("dotMpu");
 
-    const usbConnected = Boolean(serialStatus?.connected);
+    const usbConnected = Boolean(activeSerial?.connected);
     if (topEsp && dotEsp) {
       if (isDemo) {
         topEsp.textContent = "DEMO";
@@ -97,18 +102,21 @@ window.CockpitTelemetry = {
     }
 
     if (topPort) {
-      topPort.textContent = mode === "USB_SERIAL" ? (serialStatus?.port || "--") : "UDP:4210";
+      topPort.textContent = mode === "USB_SERIAL" ? (usbConnected && activeSerial?.port ? activeSerial.port : "--") : "UDP:4210";
     }
 
     if (topMpu && dotMpu) {
       if (status === "CONNECTED") {
-        topMpu.textContent = "DATA RECEIVED";
+        topMpu.textContent = "ONLINE";
         dotMpu.className = "dot dot-success";
       } else if (status === "DISCONNECTED") {
         topMpu.textContent = "DISCONNECTED";
         dotMpu.className = "dot dot-critical";
+      } else if (status === "SENSOR_ERROR") {
+        topMpu.textContent = "SENSOR_ERROR";
+        dotMpu.className = "dot dot-critical";
       } else if (status === "INVALID_PACKET") {
-        topMpu.textContent = "BAD PKT";
+        topMpu.textContent = "BAD_PACKET";
         dotMpu.className = "dot dot-critical";
       } else {
         topMpu.textContent = "WAITING";
@@ -116,19 +124,19 @@ window.CockpitTelemetry = {
       }
     }
 
-    // Settings Serial Panel updates
-    if (serialStatus) {
+    // Settings Serial Panel updates (uses the exact same authoritative serial state)
+    if (activeSerial) {
       const badge = document.getElementById("serialConnBadge");
       if (badge) {
-        badge.textContent = usbConnected ? `CONNECTED (${serialStatus.port})` : "DISCONNECTED";
+        badge.textContent = usbConnected ? `CONNECTED (${activeSerial.port})` : "DISCONNECTED";
         badge.className = usbConnected ? "badge badge-success mono" : "badge badge-muted mono";
       }
       const lastPktEl = document.getElementById("serialLastPkt");
-      if (lastPktEl) lastPktEl.textContent = serialStatus.last_packet_ts || state.last_packet_ts || "--";
+      if (lastPktEl) lastPktEl.textContent = activeSerial.last_packet_ts || state.last_packet_ts || "--";
       const errEl = document.getElementById("serialErrorText");
       if (errEl) {
-        errEl.textContent = serialStatus.last_error || "None";
-        errEl.className = serialStatus.last_error ? "mono text-critical" : "mono text-muted";
+        errEl.textContent = activeSerial.last_error || "None";
+        errEl.className = activeSerial.last_error ? "mono text-critical" : "mono text-muted";
       }
     }
 

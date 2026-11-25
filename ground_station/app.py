@@ -99,6 +99,10 @@ def create_app(start_background: bool = True, config_cls=Config) -> Flask:
     app.extensions["udp_receiver"] = udp_receiver
     app.extensions["serial_receiver"] = serial_receiver
     app.extensions["comm_mode"] = config_cls.COMM_MODE if config_cls.COMM_MODE in ("USB_SERIAL", "UDP_WIFI") else "USB_SERIAL"
+    telemetry_manager.set_serial_provider(
+        serial_receiver.get_status,
+        lambda: app.extensions.get("comm_mode", "USB_SERIAL"),
+    )
     app.extensions["telemetry_simulator"] = telemetry_simulator
     app.extensions["camera_manager"] = camera_manager
     app.extensions["detection_engine"] = detection_engine
