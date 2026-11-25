@@ -1,0 +1,52 @@
+﻿
+NORMAL (29 images)
+  WhatsApp Image 2026-11-25 at 6.31.31 PM.jpeg conf 0.82 | mask area   2.0%
+  WhatsApp Image 2026-11-25 at 6.31.33 PM.jpeg conf 0.77 | mask area   3.2%
+  WhatsApp Image 2026-11-25 at 6.31.35 PM.jpeg conf 0.75 | mask area   1.8%
+  WhatsApp Image 2026-11-25 at 6.31.36 PM.jpeg conf 0.73 | mask area   1.4%
+  WhatsApp Image 2026-11-25 at 6.31.37 PM (1).jpeg conf 0.81 | mask area   2.0%
+  WhatsApp Image 2026-11-25 at 6.31.37 PM.jpeg conf 0.90 | mask area  17.6%
+  WhatsApp Image 2026-11-25 at 6.31.38 PM (1).jpeg conf 0.89 | mask area   9.7%
+  WhatsApp Image 2026-11-25 at 6.31.38 PM.jpeg conf 0.35 | mask area   0.0%
+  WhatsApp Image 2026-11-25 at 6.31.39 PM (1).jpeg conf 0.71 | mask area   2.4%
+  WhatsApp Image 2026-11-25 at 6.31.39 PM (2).jpeg conf 0.00 | mask area   0.0%
+  WhatsApp Image 2026-11-25 at 6.31.39 PM.jpeg conf 0.70 | mask area   5.6%
+  WhatsApp Image 2026-11-25 at 6.31.40 PM (1).jpeg conf 0.00 | mask area   0.0%
+  WhatsApp Image 2026-11-25 at 6.31.40 PM.jpeg conf 0.83 | mask area  10.1%
+  WhatsApp Image 2026-11-25 at 6.31.41 PM (1).jpeg conf 0.93 | mask area  33.8%
+  WhatsApp Image 2026-11-25 at 6.31.41 PM (2).jpeg conf 0.92 | mask area  23.2%
+  WhatsApp Image 2026-11-25 at 6.31.41 PM.jpeg conf 0.62 | mask area   1.4%
+  WhatsApp Image 2026-11-25 at 6.31.42 PM (1).jpeg conf 0.84 | mask area   8.1%
+  WhatsApp Image 2026-11-25 at 6.31.42 PM.jpeg conf 0.59 | mask area   2.3%
+  WhatsApp Image 2026-11-25 at 6.31.43 PM (1).jpeg conf 0.72 | mask area   2.2%
+  WhatsApp Image 2026-11-25 at 6.31.43 PM (2).jpeg conf 0.82 | mask area   4.0%
+  WhatsApp Image 2026-11-25 at 6.31.43 PM.jpeg conf 0.72 | mask area   4.6%
+  WhatsApp Image 2026-11-25 at 6.31.44 PM (1).jpeg conf 0.94 | mask area  20.5%
+  WhatsApp Image 2026-11-25 at 6.31.44 PM.jpeg conf 0.74 | mask area   9.6%
+  WhatsApp Image 2026-11-25 at 6.31.45 PM (1).jpeg conf 0.83 | mask area   4.7%
+  WhatsApp Image 2026-11-25 at 6.31.45 PM (2).jpeg conf 0.68 | mask area   0.7%
+  WhatsApp Image 2026-11-25 at 6.31.45 PM.jpeg conf 0.71 | mask area  15.7%
+  WhatsApp Image 2026-11-25 at 6.31.46 PM (1).jpeg conf 0.91 | mask area  17.6%
+  WhatsApp Image 2026-11-25 at 6.31.46 PM.jpeg conf 0.90 | mask area  17.0%
+  WhatsApp Image 2026-11-25 at 6.31.47 PM.jpeg conf 0.95 | mask area  14.7%
+  conf  mean 0.727 (min 0.00, max 0.95)
+  area  mean 8.1% (min 0.0%, max 33.8%)
+
+CAMOUFLAGE (12 images)
+  camourflage_00012.jpg        conf 0.91 | mask area  28.8%
+  camourflage_00018.jpg        conf 0.90 | mask area  10.1%
+  camourflage_00061.jpg        conf 0.91 | mask area  16.3%
+  camourflage_00064.jpg        conf 0.75 | mask area   6.2%
+  camourflage_00071.jpg        conf 0.78 | mask area   5.0%
+  camourflage_00079.jpg        conf 0.96 | mask area  28.4%
+  camourflage_00087.jpg        conf 0.94 | mask area   8.1%
+  camourflage_00088.jpg        conf 0.88 | mask area  10.7%
+  camourflage_00090.jpg        conf 0.90 | mask area  21.0%
+  camourflage_00097.jpg        conf 0.94 | mask area  12.1%
+  camourflage_00098.jpg        conf 0.93 | mask area   5.0%
+  camourflage_00100.jpg        conf 0.72 | mask area   9.3%
+  conf  mean 0.877 (min 0.72, max 0.96)
+  area  mean 13.4% (min 5.0%, max 28.8%)
+
+conf se alag hote hain? False
+area se alag hote hain? False
