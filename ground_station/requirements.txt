@@ -1,0 +1,14 @@
+# COCKPIT — AI-Powered Drone Ground Control Station Dependencies
+flask>=3.0.0
+flask-socketio>=5.3.6
+simple-websocket>=1.0.0
+python-dotenv>=1.0.0
+psutil>=5.9.0
+pyserial>=3.5
+numpy>=1.24.0
+opencv-python>=4.8.0
+pytest>=7.4.0
+
+# Optional AI Acceleration & YOLO Detection (install CUDA PyTorch for RTX 4050)
+# torch>=2.1.0
+# ultralytics>=8.1.0

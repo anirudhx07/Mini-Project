@@ -1,168 +1,180 @@
 /**
  * @file main.cpp
- * @brief SkyForge Drone Main Controller Firmware
- * 
- * Project: AI-Assisted ESP32 Tiny Drone with Camouflage Image Processing
- * Institution: GLA University, CSE / AIML
- * Team: SkyForge (ID: 87)
- * 
- * IMPLEMENTATION STATUS:
- * [x] Hardware initialization (LEDC PWM motor driver channels, I2C bus)
- * [x] MPU6050 sensor polling & diagnostic orientation readout
- * [x] Telemetry serialization over serial port
- * [x] Emergency motor disarm / safety zero-throttle routine
- * [ ] Full closed-loop 250 Hz PID rate & attitude controller (Under Development)
- * [ ] Camera DMA acquisition & Wi-Fi video streaming (Under Evaluation)
+ * @brief SkyForge / COCKPIT ESP32 DevKit V1 + MPU6050 USB Serial Telemetry Firmware
+ *
+ * Reads MPU6050 6-axis accelerometer & gyroscope over I2C (Wire.h),
+ * computes pitch and roll via complementary filter, and transmits
+ * newline-terminated CSV telemetry at 115200 baud for COCKPIT:
+ *
+ *   ax,ay,az,gx,gy,gz,pitch,roll\n
+ *
+ * Units:
+ *   ax, ay, az   : m/s^2
+ *   gx, gy, gz   : deg/s
+ *   pitch, roll  : degrees
+ *
+ * Note: No debug text is printed to Serial so the CSV telemetry stream stays clean.
  */
 
 #include <Arduino.h>
 #include <Wire.h>
+#include <math.h>
 
-// Attempt to load private config; fallback to defaults if not present
 #if __has_include("config.h")
     #include "config.h"
 #else
     #include "config.h.example"
 #endif
 
-// Motor PWM LEDC Channels
-#define CH_M1_FL 0
-#define CH_M2_FR 1
-#define CH_M3_RR 2
-#define CH_M4_RL 3
+// MPU6050 I2C Address & Registers
+static const uint8_t MPU6050_ADDR = 0x68;
+static const float GRAVITY_MS2 = 9.80665f;
+static const float ACCEL_SCALE_2G = 16384.0f;   // LSB/g for +/-2g range
+static const float GYRO_SCALE_250 = 131.0f;     // LSB/(deg/s) for +/-250 deg/s range
+static const float RAD_TO_DEG_F = 57.2957795f;
 
-// System States
-enum FlightState {
-    STATE_DISARMED = 0,
-    STATE_ARMED,
-    STATE_FAILSAFE
-};
+// Sensor & orientation state
+float ax = 0.0f, ay = 0.0f, az = 0.0f;
+float gx = 0.0f, gy = 0.0f, gz = 0.0f;
+float pitch = 0.0f, roll = 0.0f;
 
-volatile FlightState currentState = STATE_DISARMED;
-unsigned long lastHeartbeatTime = 0;
-unsigned long lastSensorPollTime = 0;
+bool mpuReady = false;
+unsigned long lastSampleMicros = 0;
+unsigned long lastTxMillis = 0;
+unsigned long lastBlinkMillis = 0;
 
-// Function Declarations
-void initMotors();
-void setMotorSpeeds(uint16_t m1, uint16_t m2, uint16_t m3, uint16_t m4);
-void emergencyDisarm();
-bool checkMPU6050();
+bool initMPU6050();
+bool readMPU6050();
 
 void setup() {
     Serial.begin(115200);
-    delay(1000);
-    Serial.println("\n=========================================");
-    Serial.println("  SKYFORGE ONBOARD FLIGHT CONTROLLER v1.0");
-    Serial.println("  Department of CSE / AIML - GLA University");
-    Serial.println("=========================================");
+    delay(200);
 
     pinMode(PIN_STATUS_LED, OUTPUT);
     digitalWrite(PIN_STATUS_LED, LOW);
 
-    // 1. Initialize Propulsion Drivers (Safety: Always zero throttle on boot)
-    initMotors();
-    emergencyDisarm();
+    // Initialize I2C bus for MPU6050 (GPIO 21 SDA, GPIO 22 SCL @ 400kHz)
+    Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL, 400000);
+    mpuReady = initMPU6050();
 
-    // 2. Initialize I2C Bus for Sensor Diagnostics
-    Wire.begin(PIN_I2C_SDA, PIN_I2C_SCL, 400000); // 400 kHz Fast-Mode
-    if (checkMPU6050()) {
-        Serial.println("[OK] MPU6050 detected and responding on I2C.");
-    } else {
-        Serial.println("[WARN] MPU6050 not detected. Verify wiring to GPIO 21/22.");
-    }
-
-    Serial.println("[INIT] Baseline hardware initialization complete.");
-    Serial.println("[INIT] Motors disarmed. Ready for bench telemetry.");
+    lastSampleMicros = micros();
+    lastTxMillis = millis();
 }
 
 void loop() {
-    unsigned long now = millis();
+    unsigned long nowMillis = millis();
 
-    // Heartbeat LED (1 Hz blink when disarmed, 5 Hz when armed)
-    unsigned long blinkInterval = (currentState == STATE_ARMED) ? 100 : 500;
-    if (now - lastHeartbeatTime >= blinkInterval) {
-        lastHeartbeatTime = now;
+    // Heartbeat LED: slow blink if waiting for MPU6050, fast blink when streaming
+    unsigned long blinkPeriod = mpuReady ? 250 : 1000;
+    if (nowMillis - lastBlinkMillis >= blinkPeriod) {
+        lastBlinkMillis = nowMillis;
         digitalWrite(PIN_STATUS_LED, !digitalRead(PIN_STATUS_LED));
     }
 
-    // Diagnostic Sensor Polling (50 Hz interval)
-    if (now - lastSensorPollTime >= 20) {
-        lastSensorPollTime = now;
-
-        // Basic I2C acceleration read (Wire register 0x3B)
-        Wire.beginTransmission(0x68);
-        Wire.write(0x3B);
-        if (Wire.endTransmission(false) == 0) {
-            Wire.requestFrom(0x68, 6, true);
-            if (Wire.available() >= 6) {
-                int16_t ax = (Wire.read() << 8) | Wire.read();
-                int16_t ay = (Wire.read() << 8) | Wire.read();
-                int16_t az = (Wire.read() << 8) | Wire.read();
-
-                // Stream diagnostic orientation data over serial (every 200ms)
-                static uint8_t printCounter = 0;
-                if (++printCounter >= 10) {
-                    printCounter = 0;
-                    Serial.printf("[TELEM] IMU Accel -> X: %d | Y: %d | Z: %d | State: %s\n",
-                                  ax, ay, az,
-                                  (currentState == STATE_DISARMED ? "DISARMED" : "ARMED"));
-                }
-            }
+    if (!mpuReady) {
+        static unsigned long lastRetry = 0;
+        if (nowMillis - lastRetry >= 1000) {
+            lastRetry = nowMillis;
+            mpuReady = initMPU6050();
         }
+        return;
     }
 
-    // Safety: Handle serial commands for bench testing
-    if (Serial.available()) {
-        char cmd = (char)Serial.read();
-        if (cmd == 'd' || cmd == 'D') {
-            emergencyDisarm();
-            Serial.println("[CMD] Disarm triggered.");
-        } else if (cmd == 's' || cmd == 'S') {
-            Serial.println("[CMD] Status report: Safety interlock engaged.");
+    // Stream CSV telemetry at 50 Hz (every 20 ms)
+    if (nowMillis - lastTxMillis >= 20) {
+        lastTxMillis = nowMillis;
+        if (readMPU6050()) {
+            Serial.printf("%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f,%.2f\n",
+                          ax, ay, az,
+                          gx, gy, gz,
+                          pitch, roll);
         }
     }
 }
 
-void initMotors() {
-    // Configure ESP32 LEDC PWM timers for high-frequency low-noise motor drive
-    ledcAttach(PIN_MOTOR_FL_CW, PWM_FREQUENCY, PWM_RESOLUTION);
-    ledcAttach(PIN_MOTOR_FR_CCW, PWM_FREQUENCY, PWM_RESOLUTION);
-    ledcAttach(PIN_MOTOR_RR_CW, PWM_FREQUENCY, PWM_RESOLUTION);
-    ledcAttach(PIN_MOTOR_RL_CCW, PWM_FREQUENCY, PWM_RESOLUTION);
-}
-
-void setMotorSpeeds(uint16_t m1, uint16_t m2, uint16_t m3, uint16_t m4) {
-    if (currentState != STATE_ARMED) {
-        m1 = m2 = m3 = m4 = 0;
+bool initMPU6050() {
+    // Verify WHO_AM_I register (0x75)
+    Wire.beginTransmission(MPU6050_ADDR);
+    Wire.write(0x75);
+    if (Wire.endTransmission(false) != 0) {
+        return false;
     }
-    // Cap speeds at safety limit
-    m1 = min(m1, (uint16_t)MAX_THROTTLE_LIMIT);
-    m2 = min(m2, (uint16_t)MAX_THROTTLE_LIMIT);
-    m3 = min(m3, (uint16_t)MAX_THROTTLE_LIMIT);
-    m4 = min(m4, (uint16_t)MAX_THROTTLE_LIMIT);
-
-    ledcWrite(PIN_MOTOR_FL_CW, m1);
-    ledcWrite(PIN_MOTOR_FR_CCW, m2);
-    ledcWrite(PIN_MOTOR_RR_CW, m3);
-    ledcWrite(PIN_MOTOR_RL_CCW, m4);
-}
-
-void emergencyDisarm() {
-    currentState = STATE_DISARMED;
-    ledcWrite(PIN_MOTOR_FL_CW, 0);
-    ledcWrite(PIN_MOTOR_FR_CCW, 0);
-    ledcWrite(PIN_MOTOR_RR_CW, 0);
-    ledcWrite(PIN_MOTOR_RL_CCW, 0);
-}
-
-bool checkMPU6050() {
-    Wire.beginTransmission(0x68);
-    Wire.write(0x75); // WHO_AM_I register
-    if (Wire.endTransmission(false) != 0) return false;
-    Wire.requestFrom(0x68, 1, true);
-    if (Wire.available()) {
-        uint8_t id = Wire.read();
-        return (id == 0x68);
+    Wire.requestFrom(MPU6050_ADDR, (uint8_t)1, (uint8_t)true);
+    if (!Wire.available()) {
+        return false;
     }
-    return false;
+    uint8_t whoami = Wire.read();
+    if (whoami != 0x68 && whoami != 0x72) {
+        return false;
+    }
+
+    // Wake up MPU6050 (PWR_MGMT_1 register 0x6B = 0x00)
+    Wire.beginTransmission(MPU6050_ADDR);
+    Wire.write(0x6B);
+    Wire.write(0x00);
+    if (Wire.endTransmission(true) != 0) {
+        return false;
+    }
+
+    // Configure accelerometer +/-2g (ACCEL_CONFIG 0x1C = 0x00)
+    Wire.beginTransmission(MPU6050_ADDR);
+    Wire.write(0x1C);
+    Wire.write(0x00);
+    Wire.endTransmission(true);
+
+    // Configure gyroscope +/-250 deg/s (GYRO_CONFIG 0x1B = 0x00)
+    Wire.beginTransmission(MPU6050_ADDR);
+    Wire.write(0x1B);
+    Wire.write(0x00);
+    Wire.endTransmission(true);
+
+    return true;
+}
+
+bool readMPU6050() {
+    Wire.beginTransmission(MPU6050_ADDR);
+    Wire.write(0x3B); // ACCEL_XOUT_H
+    if (Wire.endTransmission(false) != 0) {
+        return false;
+    }
+
+    Wire.requestFrom(MPU6050_ADDR, (uint8_t)14, (uint8_t)true);
+    if (Wire.available() < 14) {
+        return false;
+    }
+
+    int16_t rawAx = (Wire.read() << 8) | Wire.read();
+    int16_t rawAy = (Wire.read() << 8) | Wire.read();
+    int16_t rawAz = (Wire.read() << 8) | Wire.read();
+    int16_t rawTemp = (Wire.read() << 8) | Wire.read();
+    (void)rawTemp;
+    int16_t rawGx = (Wire.read() << 8) | Wire.read();
+    int16_t rawGy = (Wire.read() << 8) | Wire.read();
+    int16_t rawGz = (Wire.read() << 8) | Wire.read();
+
+    // Convert to physical units: m/s^2 and deg/s
+    ax = ((float)rawAx / ACCEL_SCALE_2G) * GRAVITY_MS2;
+    ay = ((float)rawAy / ACCEL_SCALE_2G) * GRAVITY_MS2;
+    az = ((float)rawAz / ACCEL_SCALE_2G) * GRAVITY_MS2;
+
+    gx = (float)rawGx / GYRO_SCALE_250;
+    gy = (float)rawGy / GYRO_SCALE_250;
+    gz = (float)rawGz / GYRO_SCALE_250;
+
+    unsigned long nowMicros = micros();
+    float dt = (float)(nowMicros - lastSampleMicros) / 1000000.0f;
+    lastSampleMicros = nowMicros;
+    if (dt <= 0.0f || dt > 0.5f) {
+        dt = 0.02f;
+    }
+
+    // Accelerometer tilt angles in degrees
+    float accelPitch = atan2f(-ax, sqrtf(ay * ay + az * az)) * RAD_TO_DEG_F;
+    float accelRoll = atan2f(ay, az) * RAD_TO_DEG_F;
+
+    // Complementary filter
+    pitch = 0.96f * (pitch + gy * dt) + 0.04f * accelPitch;
+    roll  = 0.96f * (roll  + gx * dt) + 0.04f * accelRoll;
+
+    return true;
 }

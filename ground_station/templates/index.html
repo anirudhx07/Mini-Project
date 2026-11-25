@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>COCKPIT — Drone Ground Control Station</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/components.css') }}" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <!-- Persistent Left Sidebar -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-brand">
+        <div class="brand-mark">
+          <i data-lucide="crosshair"></i>
+        </div>
+        <div class="brand-text">
+          <span class="brand-name">COCKPIT</span>
+          <span class="brand-sub">SEE. ANALYZE. CONTROL.</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav" id="sidebarNav">
+        <button class="nav-item active" data-view="overview">
+          <i data-lucide="layout-dashboard"></i>
+          <span>Overview</span>
+        </button>
+        <button class="nav-item" data-view="telemetry">
+          <i data-lucide="activity"></i>
+          <span>Flight Telemetry</span>
+        </button>
+        <button class="nav-item" data-view="camera">
+          <i data-lucide="video"></i>
+          <span>Camera Feed</span>
+        </button>
+        <button class="nav-item" data-view="detection">
+          <i data-lucide="scan"></i>
+          <span>Object Detection</span>
+        </button>
+        <button class="nav-item" data-view="tracking">
+          <i data-lucide="locate-fixed"></i>
+          <span>Object Tracking</span>
+        </button>
+        <button class="nav-item" data-view="camouflage">
+          <i data-lucide="eye"></i>
+          <span>Camouflage Analysis</span>
+        </button>
+        <button class="nav-item" data-view="logs">
+          <i data-lucide="scroll-text"></i>
+          <span>Mission Logs</span>
+        </button>
+        <button class="nav-item" data-view="settings">
+          <i data-lucide="sliders-horizontal"></i>
+          <span>System Settings</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="mode-indicator" id="sidebarModeBox">
+          <span class="dot dot-success" id="sidebarModeDot"></span>
+          <div>
+            <div class="mode-title" id="sidebarModeLabel">REAL HARDWARE MODE</div>
+            <div class="mode-desc" id="sidebarUdpLabel">UDP 0.0.0.0:4210</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Column -->
+    <div class="main-column">
+      <!-- Top Status Bar -->
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="icon-btn mobile-menu-btn" id="mobileMenuBtn" title="Toggle Menu">
+            <i data-lucide="menu"></i>
+          </button>
+          <div class="topbar-title-group">
+            <h1 class="page-heading" id="activePageTitle">Operational Overview</h1>
+            <span class="demo-banner hidden" id="demoBanner">DEMO MODE ACTIVE — SIMULATED DATA</span>
+          </div>
+        </div>
+
+        <div class="topbar-status-strip">
+          <div class="status-pill" id="pillBackend">
+            <span class="dot dot-success"></span>
+            <span class="pill-label">SYS</span>
+            <span class="pill-val" id="topSysStatus">ONLINE</span>
+          </div>
+          <div class="status-pill" id="pillEsp32">
+            <span class="dot dot-warn" id="dotEsp32"></span>
+            <span class="pill-label">ESP32 USB</span>
+            <span class="pill-val" id="topEsp32Status">DISCONNECTED</span>
+          </div>
+          <div class="status-pill" id="pillPort">
+            <span class="pill-label">PORT</span>
+            <span class="pill-val" id="topPortStatus">--</span>
+          </div>
+          <div class="status-pill" id="pillMpu">
+            <span class="dot dot-warn" id="dotMpu"></span>
+            <span class="pill-label">MPU6050</span>
+            <span class="pill-val" id="topMpuStatus">WAITING</span>
+          </div>
+          <div class="status-pill" id="pillCamera">
+            <span class="dot dot-muted" id="dotCamera"></span>
+            <span class="pill-label">CAM</span>
+            <span class="pill-val" id="topCamStatus">STOPPED</span>
+          </div>
+          <div class="status-pill" id="pillAI">
+            <span class="dot dot-muted" id="dotAI"></span>
+            <span class="pill-label">AI</span>
+            <span class="pill-val" id="topAiStatus">IDLE</span>
+          </div>
+          <div class="clock-box mono" id="localClock">--:--:--</div>
+          <button class="icon-btn" id="topSettingsBtn" title="System Settings">
+            <i data-lucide="settings"></i>
+          </button>
+        </div>
+      </header>
+
+      <!-- Dynamic Workspace Views -->
+      <main class="workspace">
+        <!-- 1. OVERVIEW VIEW -->
+        <section class="view-section active" id="view-overview">
+          <div class="grid-overview-top">
+            <!-- System Status Panel -->
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title"><i data-lucide="cpu"></i> System Status</span>
+                <span class="badge badge-info mono" id="ovRateBadge">0.0 Hz</span>
+              </div>
+              <div class="status-grid">
+                <div class="kv-row"><span>ESP32 Link</span><strong class="mono" id="ovEspStatus">WAITING_FOR_DATA</strong></div>
+                <div class="kv-row"><span>MPU6050 IMU</span><strong class="mono" id="ovMpuStatus">WAITING</strong></div>
+                <div class="kv-row"><span>Camera Feed</span><strong class="mono" id="ovCamStatus">STOPPED</strong></div>
+                <div class="kv-row"><span>Telemetry Link</span><strong class="mono" id="ovUdpStatus">USB_SERIAL (IDLE)</strong></div>
+                <div class="kv-row"><span>Backend API</span><strong class="mono text-success" id="ovBackendStatus">ONLINE</strong></div>
+                <div class="kv-row"><span>AI Engine</span><strong class="mono" id="ovAiStatus">NOT CONFIGURED</strong></div>
+              </div>
+            </div>
+
+            <!-- Flight Orientation -->
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title"><i data-lucide="compass"></i> Flight Orientation</span>
+                <span class="badge badge-muted mono" id="ovOrientSource">NO DATA</span>
+              </div>
+              <div class="orientation-body">
+                <div class="horizon-widget">
+                  <div class="horizon-disc" id="horizonDisc">
+                    <div class="horizon-sky"></div>
+                    <div class="horizon-ground"></div>
+                    <div class="horizon-line"></div>
+                  </div>
+                  <div class="horizon-reticle"></div>
+                </div>
+                <div class="orient-metrics">
+                  <div class="metric-card">
+                    <span class="metric-label">PITCH</span>
+                    <span class="metric-value mono" id="ovPitch">--.-°</span>
+                  </div>
+                  <div class="metric-card">
+                    <span class="metric-label">ROLL</span>
+                    <span class="metric-value mono" id="ovRoll">--.-°</span>
+                  </div>
+                  <div class="metric-card">
+                    <span class="metric-label">YAW RATE (GZ)</span>
+                    <span class="metric-value mono" id="ovYawRate">--.-°/s</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- IMU Raw Vectors -->
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title"><i data-lucide="gauge"></i> MPU6050 Inertial Vectors</span>
+              </div>
+              <div class="imu-dual">
+                <div>
+                  <div class="sub-label">ACCELEROMETER (m/s²)</div>
+                  <div class="kv-row"><span>Accel X</span><strong class="mono" id="ovAx">--.--</strong></div>
+                  <div class="kv-row"><span>Accel Y</span><strong class="mono" id="ovAy">--.--</strong></div>
+                  <div class="kv-row"><span>Accel Z</span><strong class="mono" id="ovAz">--.--</strong></div>
+                </div>
+                <div>
+                  <div class="sub-label">GYROSCOPE (deg/s)</div>
+                  <div class="kv-row"><span>Gyro X</span><strong class="mono" id="ovGx">--.--</strong></div>
+                  <div class="kv-row"><span>Gyro Y</span><strong class="mono" id="ovGy">--.--</strong></div>
+                  <div class="kv-row"><span>Gyro Z</span><strong class="mono" id="ovGz">--.--</strong></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Overview Charts + Preview + AI + Event Log -->
+          <div class="grid-overview-mid">
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title"><i data-lucide="trending-up"></i> Attitude &amp; Acceleration Stream</span>
+                <span class="text-muted mono" id="ovPacketCounter">PKTS: 0</span>
+              </div>
+              <div class="chart-box"><canvas id="chartOvOrientation"></canvas></div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title"><i data-lucide="video"></i> Active Camera Preview</span>
+                <span class="badge badge-muted mono" id="ovCamFps">0 FPS</span>
+              </div>
+              <div class="video-frame-box small-preview">
+                <img id="ovCamImg" class="video-feed hidden" alt="Camera Preview" />
+                <div class="video-placeholder" id="ovCamPlaceholder">
+                  <i data-lucide="video-off"></i>
+                  <span>Camera inactive — Start from Camera Feed</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid-overview-bot">
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title"><i data-lucide="cpu"></i> AI Activity Summary</span>
+              </div>
+              <div class="status-grid">
+                <div class="kv-row"><span>Active AI Module</span><strong class="mono" id="ovAiModule">NONE</strong></div>
+                <div class="kv-row"><span>Detection Count</span><strong class="mono" id="ovAiDetCount">0</strong></div>
+                <div class="kv-row"><span>Tracking Status</span><strong class="mono" id="ovAiTrackStatus">INACTIVE</strong></div>
+                <div class="kv-row"><span>Camouflage Module</span><strong class="mono" id="ovAiCamoStatus">BASELINE READY</strong></div>
+                <div class="kv-row"><span>Latest Inference</span><strong class="mono" id="ovAiLatency">-- ms</strong></div>
+                <div class="kv-row"><span>Compute Device</span><strong class="mono" id="ovAiDevice">CPU</strong></div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title"><i data-lucide="terminal"></i> Live Event Log</span>
+              </div>
+              <div class="event-feed mono" id="ovEventList"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2. FLIGHT TELEMETRY VIEW -->
+        <section class="view-section" id="view-telemetry">
+          <div class="toolbar-panel panel">
+            <div class="toolbar-group">
+              <span class="badge mono" id="telStatusBadge">WAITING_FOR_DATA</span>
+              <span class="mono text-muted">Source: <strong id="telSourceIp">--</strong></span>
+              <span class="mono text-muted">Rate: <strong id="telRateHz">0.0 Hz</strong></span>
+              <span class="mono text-muted">Valid: <strong id="telValidCount">0</strong></span>
+              <span class="mono text-muted">Invalid: <strong id="telInvalidCount">0</strong></span>
+            </div>
+            <div class="toolbar-group">
+              <button class="btn btn-secondary" id="btnCalibrateZero"><i data-lucide="crosshair"></i> Zero Level</button>
+              <button class="btn btn-secondary" id="btnCalibrateReset"><i data-lucide="rotate-ccw"></i> Reset Offset</button>
+              <button class="btn btn-warning" id="btnToggleDemoTel"><i data-lucide="flask-conical"></i> <span id="btnDemoLabel">Enable Demo Mode</span></button>
+            </div>
+          </div>
+
+          <div class="grid-3">
+            <div class="panel">
+              <div class="panel-header"><span class="panel-title">Pitch &amp; Roll (°)</span></div>
+              <div class="chart-box tall"><canvas id="chartTelAttitude"></canvas></div>
+            </div>
+            <div class="panel">
+              <div class="panel-header"><span class="panel-title">Accelerometer X / Y / Z (m/s²)</span></div>
+              <div class="chart-box tall"><canvas id="chartTelAccel"></canvas></div>
+            </div>
+            <div class="panel">
+              <div class="panel-header"><span class="panel-title">Gyroscope X / Y / Z (deg/s)</span></div>
+              <div class="chart-box tall"><canvas id="chartTelGyro"></canvas></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 3. CAMERA FEED VIEW -->
+        <section class="view-section" id="view-camera">
+          <div class="toolbar-panel panel">
+            <div class="toolbar-group">
+              <label class="field-inline">Source
+                <select id="camSourceSelect" class="input">
+                  <option value="webcam">Laptop Webcam</option>
+                  <option value="esp32cam">ESP32-CAM Stream (Future)</option>
+                </select>
+              </label>
+              <label class="field-inline">Index
+                <input type="number" id="camIndexInput" class="input input-sm" value="0" min="0" max="10" />
+              </label>
+              <label class="field-inline">Resolution
+                <select id="camResSelect" class="input">
+                  <option value="640x480">640x480</option>
+                  <option value="1280x720">1280x720</option>
+                  <option value="320x240">320x240</option>
+                </select>
+              </label>
+              <label class="field-inline">FPS
+                <input type="number" id="camFpsInput" class="input input-sm" value="30" min="1" max="60" />
+              </label>
+            </div>
+            <div class="toolbar-group">
+              <button class="btn btn-primary" id="btnCamStart"><i data-lucide="play"></i> Start Camera</button>
+              <button class="btn btn-danger" id="btnCamStop"><i data-lucide="square"></i> Stop Camera</button>
+              <button class="btn btn-secondary" id="btnCamCapture"><i data-lucide="camera"></i> Capture Frame</button>
+            </div>
+          </div>
+
+          <div class="grid-2-asym">
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title"><i data-lucide="video"></i> Live Optical Feed</span>
+                <span class="mono text-muted" id="camFeedMeta">STOPPED • 0 FPS</span>
+              </div>
+              <div class="video-frame-box large-preview">
+                <img id="camLiveImg" class="video-feed hidden" alt="Live Camera Stream" />
+                <div class="video-placeholder" id="camLivePlaceholder">
+                  <i data-lucide="video-off"></i>
+                  <span>Click "Start Camera" to initialize video stream</span>
+                </div>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title"><i data-lucide="image"></i> Latest Snapshot</span>
+              </div>
+              <div class="snapshot-box" id="camSnapshotBox">
+                <span class="text-muted">No snapshot captured in this session</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 4. OBJECT DETECTION VIEW -->
+        <section class="view-section" id="view-detection">
+          <div class="toolbar-panel panel">
+            <div class="toolbar-group">
+              <label class="field-inline">Model Path
+                <input type="text" id="detModelInput" class="input input-md" value="models/yolov8n.pt" />
+              </label>
+              <label class="field-inline">Confidence <span class="mono" id="detConfVal">0.40</span>
+                <input type="range" id="detConfSlider" min="0.10" max="0.95" step="0.05" value="0.40" />
+              </label>
+              <label class="field-inline">Classes (comma)
+                <input type="text" id="detClassesInput" class="input input-md" placeholder="all classes" />
+              </label>
+            </div>
+            <div class="toolbar-group">
+              <button class="btn btn-primary" id="btnDetStart"><i data-lucide="play"></i> Start Detection</button>
+              <button class="btn btn-danger" id="btnDetStop"><i data-lucide="square"></i> Stop Detection</button>
+              <button class="btn btn-secondary" id="btnDetCapture"><i data-lucide="camera"></i> Save Snapshot</button>
+            </div>
+          </div>
+
+          <div class="grid-2-asym">
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title"><i data-lucide="scan"></i> YOLO Annotated Feed</span>
+                <span class="mono text-muted" id="detMetricsMeta">IDLE • 0 ms • 0 FPS</span>
+              </div>
+              <div class="video-frame-box large-preview">
+                <img id="detLiveImg" class="video-feed hidden" alt="YOLO Detection Stream" />
+                <div class="video-placeholder" id="detLivePlaceholder">
+                  <i data-lucide="scan-line"></i>
+                  <span id="detPlaceholderMsg">Detection inactive. Ensure camera is running and YOLO weights exist in ground_station/models/.</span>
+                </div>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title">Detected Objects</span>
+                <span class="badge badge-info mono" id="detCountBadge">0</span>
+              </div>
+              <div class="table-wrap">
+                <table class="data-table mono">
+                  <thead><tr><th>Class</th><th>Conf</th><th>BBox</th></tr></thead>
+                  <tbody id="detTableBody"><tr><td colspan="3" class="text-muted">No detections</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 5. OBJECT TRACKING VIEW -->
+        <section class="view-section" id="view-tracking">
+          <div class="toolbar-panel panel">
+            <div class="toolbar-group">
+              <span class="badge badge-muted mono" id="trkStateBadge">INACTIVE</span>
+              <span class="mono text-muted">Tracker: <strong id="trkModeText">ByteTrack</strong></span>
+              <span class="mono text-muted">Active IDs: <strong id="trkActiveCount">0</strong></span>
+              <span class="mono text-muted">Unique Total: <strong id="trkUniqueCount">0</strong></span>
+            </div>
+            <div class="toolbar-group">
+              <label class="field-inline">Highlight ID
+                <input type="number" id="trkSelectInput" class="input input-sm" placeholder="ID" min="1" />
+              </label>
+              <button class="btn btn-secondary" id="btnTrkSelect">Highlight</button>
+              <button class="btn btn-primary" id="btnTrkStart"><i data-lucide="play"></i> Start Tracking</button>
+              <button class="btn btn-danger" id="btnTrkStop"><i data-lucide="square"></i> Stop Tracking</button>
+            </div>
+          </div>
+
+          <div class="grid-2-asym">
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title"><i data-lucide="locate-fixed"></i> Multi-Object Tracking Feed</span>
+                <span class="mono text-muted" id="trkPerfMeta">0 ms • 0 FPS</span>
+              </div>
+              <div class="video-frame-box large-preview">
+                <img id="trkLiveImg" class="video-feed hidden" alt="Tracking Stream" />
+                <div class="video-placeholder" id="trkLivePlaceholder">
+                  <i data-lucide="crosshair"></i>
+                  <span id="trkPlaceholderMsg">Tracking is inactive. Start camera and click "Start Tracking".</span>
+                </div>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-header"><span class="panel-title">Active Track Table</span></div>
+              <div class="table-wrap">
+                <table class="data-table mono">
+                  <thead><tr><th>ID</th><th>Class</th><th>Conf</th><th>Trail</th></tr></thead>
+                  <tbody id="trkTableBody"><tr><td colspan="4" class="text-muted">Tracking inactive</td></tr></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 6. CAMOUFLAGE ANALYSIS VIEW -->
+        <section class="view-section" id="view-camouflage">
+          <div class="toolbar-panel panel">
+            <div class="toolbar-group">
+              <span class="badge badge-info mono" id="camoModeBadge">BASELINE VISUAL ANALYSIS</span>
+              <span class="badge badge-warning mono" id="camoModelBadge">TRAINED MODEL: NOT CONFIGURED</span>
+              <label class="field-inline">Sensitivity <span class="mono" id="camoSensVal">0.60</span>
+                <input type="range" id="camoSensSlider" min="0.20" max="0.95" step="0.05" value="0.60" />
+              </label>
+            </div>
+            <div class="toolbar-group">
+              <button class="btn btn-primary" id="btnCamoAnalyze"><i data-lucide="sparkles"></i> Analyze Current Frame</button>
+            </div>
+          </div>
+
+          <div class="notice-bar">
+            <i data-lucide="info"></i>
+            <span id="camoDisclaimer">Baseline visual analysis computes LAB color distance, local texture variance, and Sobel edge density. It is not a trained camouflage classifier.</span>
+          </div>
+
+          <div class="grid-2">
+            <div class="panel">
+              <div class="panel-header"><span class="panel-title">Original Captured Frame</span></div>
+              <div class="video-frame-box large-preview">
+                <img id="camoOrigImg" class="video-feed hidden" alt="Original Frame" />
+                <div class="video-placeholder" id="camoOrigPlaceholder"><span>Run analysis on an active camera frame</span></div>
+              </div>
+            </div>
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title">Saliency &amp; Suspicious Regions</span>
+                <span class="mono text-muted" id="camoResultMeta">0 regions • -- ms</span>
+              </div>
+              <div class="video-frame-box large-preview">
+                <img id="camoAnaImg" class="video-feed hidden" alt="Analyzed Frame" />
+                <div class="video-placeholder" id="camoAnaPlaceholder"><span>Analysis output will render here</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 7. MISSION LOGS VIEW -->
+        <section class="view-section" id="view-logs">
+          <div class="toolbar-panel panel">
+            <div class="toolbar-group">
+              <input type="text" id="logSearchInput" class="input input-md" placeholder="Search logs..." />
+              <select id="logCatSelect" class="input">
+                <option value="ALL">All Categories</option>
+                <option value="SYSTEM">SYSTEM</option>
+                <option value="ESP32">ESP32</option>
+                <option value="CAMERA">CAMERA</option>
+                <option value="AI">AI</option>
+              </select>
+              <input type="date" id="logDateFrom" class="input" />
+              <input type="date" id="logDateTo" class="input" />
+              <button class="btn btn-secondary" id="btnLogsRefresh"><i data-lucide="refresh-cw"></i> Filter</button>
+            </div>
+            <div class="toolbar-group">
+              <a class="btn btn-secondary" href="/api/logs/export" target="_blank"><i data-lucide="download"></i> Export CSV</a>
+              <button class="btn btn-danger" id="btnLogsClear"><i data-lucide="trash-2"></i> Clear Logs</button>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="table-wrap logs-table-wrap">
+              <table class="data-table mono">
+                <thead><tr><th>ID</th><th>Timestamp</th><th>Category</th><th>Level</th><th>Message</th><th>Capture Ref</th></tr></thead>
+                <tbody id="logsTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- 8. SYSTEM SETTINGS VIEW -->
+        <section class="view-section" id="view-settings">
+          <div class="grid-2">
+            <div class="panel">
+              <div class="panel-header">
+                <span class="panel-title"><i data-lucide="usb"></i> USB Serial Connection (ESP32)</span>
+                <span class="badge badge-muted mono" id="serialConnBadge">DISCONNECTED</span>
+              </div>
+              <div class="form-stack">
+                <label class="form-field">Available COM Ports
+                  <div class="btn-row">
+                    <select id="serialPortSelect" class="input" style="flex: 1;"></select>
+                    <button class="btn btn-secondary" id="btnSerialRefresh"><i data-lucide="refresh-cw"></i> Refresh Ports</button>
+                  </div>
+                </label>
+                <label class="form-field">Baud Rate
+                  <select id="serialBaudSelect" class="input">
+                    <option value="9600">9600</option>
+                    <option value="57600">57600</option>
+                    <option value="115200" selected>115200 (Default)</option>
+                    <option value="230400">230400</option>
+                    <option value="460800">460800</option>
+                    <option value="921600">921600</option>
+                  </select>
+                </label>
+                <div class="btn-row">
+                  <button class="btn btn-primary" id="btnSerialConnect"><i data-lucide="plug"></i> Connect</button>
+                  <button class="btn btn-danger" id="btnSerialDisconnect"><i data-lucide="unplug"></i> Disconnect</button>
+                </div>
+                <div class="kv-row"><span>Last Received Packet</span><strong class="mono" id="serialLastPkt">--</strong></div>
+                <div class="kv-row"><span>Serial Status / Error</span><strong class="mono text-warning" id="serialErrorText">None</strong></div>
+                <div class="notice-bar">
+                  <i data-lucide="info"></i>
+                  <span>Close Arduino Serial Monitor or other COM tools before connecting COCKPIT on Windows.</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header"><span class="panel-title"><i data-lucide="wifi"></i> Telemetry Mode &amp; UDP Network</span></div>
+              <div class="form-stack">
+                <label class="form-field">Communication Mode
+                  <select id="setCommMode" class="input">
+                    <option value="USB_SERIAL">USB_SERIAL (Default — Direct Cable)</option>
+                    <option value="UDP_WIFI">UDP_WIFI (Wireless Network)</option>
+                  </select>
+                </label>
+                <div class="kv-row"><span>Laptop Local IP</span><strong class="mono" id="setLocalIp">--</strong></div>
+                <label class="form-field">UDP Receiving Port
+                  <input type="number" id="setUdpPort" class="input" value="4210" />
+                </label>
+                <label class="form-field">ESP32 Timeout (seconds)
+                  <input type="number" id="setTimeout" class="input" value="3.0" step="0.5" min="0.5" />
+                </label>
+                <label class="form-field">Telemetry History Buffer Size
+                  <input type="number" id="setHistorySize" class="input" value="300" min="50" max="2000" />
+                </label>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header"><span class="panel-title"><i data-lucide="cpu"></i> AI &amp; Compute Hardware</span></div>
+              <div class="form-stack">
+                <div class="kv-row"><span>GPU Device</span><strong class="mono" id="setGpuName">--</strong></div>
+                <div class="kv-row"><span>CUDA Available</span><strong class="mono" id="setCudaAvail">--</strong></div>
+                <label class="form-field">YOLO Model Path
+                  <input type="text" id="setModelPath" class="input" value="models/yolov8n.pt" />
+                </label>
+                <label class="form-field">AI Device Preference
+                  <select id="setAiDevice" class="input">
+                    <option value="auto">Auto (CUDA if available)</option>
+                    <option value="cuda">CUDA GPU</option>
+                    <option value="cpu">CPU</option>
+                  </select>
+                </label>
+                <label class="form-field">Inference Frame Skip
+                  <input type="number" id="setFrameSkip" class="input" value="1" min="1" max="10" />
+                </label>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header"><span class="panel-title"><i data-lucide="hard-drive"></i> Storage &amp; System Diagnostics</span></div>
+              <div class="form-stack">
+                <div class="kv-row"><span>Captures Directory</span><strong class="mono" id="setCapturesDir">--</strong></div>
+                <div class="kv-row"><span>SQLite Database</span><strong class="mono" id="setDbPath">--</strong></div>
+                <div class="kv-row"><span>CPU Utilization</span><strong class="mono" id="setCpuPct">--%</strong></div>
+                <div class="kv-row"><span>Memory Usage</span><strong class="mono" id="setMemPct">--%</strong></div>
+                <div class="kv-row"><span>WebSocket Link</span><strong class="mono" id="setWsStatus">CONNECTING</strong></div>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header"><span class="panel-title"><i data-lucide="sliders"></i> Application &amp; Mode Control</span></div>
+              <div class="form-stack">
+                <div class="kv-row"><span>Active Theme</span><strong class="mono">Dark Aerospace (#080D16)</strong></div>
+                <div class="kv-row"><span>ESP32-CAM Stream URL (Future)</span></div>
+                <input type="text" id="setEsp32CamUrl" class="input" placeholder="http://192.168.x.x:81/stream" />
+                <div class="btn-row">
+                  <button class="btn btn-primary" id="btnSaveSettings"><i data-lucide="save"></i> Apply Settings</button>
+                  <button class="btn btn-warning" id="btnToggleDemoSettings"><i data-lucide="flask-conical"></i> Toggle Demo Mode</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/telemetry.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/camera.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/detection.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/tracking.js') }}"></script>
+  <script src="{{ url_for('static', filename='js/camouflage.js') }}"></script>
+</body>
+</html>

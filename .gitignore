@@ -54,6 +54,11 @@ ground_station/logs/*.csv
 # Sensitive Local Configurations (Wi-Fi passwords, IP addresses)
 firmware/**/secrets.h
 ground_station/config/secrets.json
+ground_station/.env
+ground_station/database/*.db
+ground_station/captures/*.jpg
+ground_station/captures/*.png
+ground_station/models/*.pt
 .env
 
 # OpenSCAD backup files
