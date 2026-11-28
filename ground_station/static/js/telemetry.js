@@ -80,10 +80,9 @@ window.CockpitTelemetry = {
     if (modeDot) modeDot.className = isDemo ? "dot dot-warn" : "dot dot-success";
     if (demoBtnLabel) demoBtnLabel.textContent = isDemo ? "Disable Demo Mode" : "Enable Demo Mode";
 
-    // Topbar ESP32 USB + Port + MPU6050 pills
+    // Topbar ESP32 WIFI + MPU6050 pills
     const topEsp = document.getElementById("topEsp32Status");
     const dotEsp = document.getElementById("dotEsp32");
-    const topPort = document.getElementById("topPortStatus");
     const topMpu = document.getElementById("topMpuStatus");
     const dotMpu = document.getElementById("dotMpu");
 
@@ -92,22 +91,26 @@ window.CockpitTelemetry = {
       if (isDemo) {
         topEsp.textContent = "DEMO";
         dotEsp.className = "dot dot-warn";
-      } else if (mode === "USB_SERIAL") {
-        topEsp.textContent = usbConnected ? "CONNECTED" : "DISCONNECTED";
-        dotEsp.className = usbConnected ? "dot dot-success" : "dot dot-critical";
+      } else if (mode === "UDP_WIFI") {
+        if (status === "CONNECTED") {
+          topEsp.textContent = "CONNECTED";
+          dotEsp.className = "dot dot-success";
+        } else if (status === "DISCONNECTED") {
+          topEsp.textContent = "DISCONNECTED";
+          dotEsp.className = "dot dot-critical";
+        } else {
+          topEsp.textContent = "WAITING";
+          dotEsp.className = "dot dot-warn";
+        }
       } else {
-        topEsp.textContent = status === "CONNECTED" ? "UDP CONNECTED" : status;
-        dotEsp.className = status === "CONNECTED" ? "dot dot-success" : "dot dot-warn";
+        topEsp.textContent = usbConnected ? `USB (${activeSerial.port})` : "DISCONNECTED";
+        dotEsp.className = usbConnected ? "dot dot-success" : "dot dot-critical";
       }
-    }
-
-    if (topPort) {
-      topPort.textContent = mode === "USB_SERIAL" ? (usbConnected && activeSerial?.port ? activeSerial.port : "--") : "UDP:4210";
     }
 
     if (topMpu && dotMpu) {
       if (status === "CONNECTED") {
-        topMpu.textContent = "ONLINE";
+        topMpu.textContent = "CONNECTED";
         dotMpu.className = "dot dot-success";
       } else if (status === "DISCONNECTED") {
         topMpu.textContent = "DISCONNECTED";
@@ -124,21 +127,21 @@ window.CockpitTelemetry = {
       }
     }
 
-    // Settings Serial Panel updates (uses the exact same authoritative serial state)
-    if (activeSerial) {
-      const badge = document.getElementById("serialConnBadge");
-      if (badge) {
-        badge.textContent = usbConnected ? `CONNECTED (${activeSerial.port})` : "DISCONNECTED";
-        badge.className = usbConnected ? "badge badge-success mono" : "badge badge-muted mono";
-      }
-      const lastPktEl = document.getElementById("serialLastPkt");
-      if (lastPktEl) lastPktEl.textContent = activeSerial.last_packet_ts || state.last_packet_ts || "--";
-      const errEl = document.getElementById("serialErrorText");
-      if (errEl) {
-        errEl.textContent = activeSerial.last_error || "None";
-        errEl.className = activeSerial.last_error ? "mono text-critical" : "mono text-muted";
-      }
+    // Section A: Flight Controller Panel updates
+    const fcBadge = document.getElementById("setFcConnBadge");
+    if (fcBadge) {
+      fcBadge.textContent = status;
+      fcBadge.className =
+        status === "CONNECTED"
+          ? "badge badge-success mono"
+          : status === "DISCONNECTED" || status === "INVALID_PACKET"
+          ? "badge badge-critical mono"
+          : "badge badge-warning mono";
     }
+    const fcIpEl = document.getElementById("setFcEsp32Ip");
+    if (fcIpEl) fcIpEl.textContent = state.source_ip || "--";
+    const fcLastEl = document.getElementById("setFcLastPkt");
+    if (fcLastEl) fcLastEl.textContent = state.last_packet_ts || "--";
 
     // Overview & Telemetry page metadata
     document.getElementById("ovEspStatus").textContent = status;

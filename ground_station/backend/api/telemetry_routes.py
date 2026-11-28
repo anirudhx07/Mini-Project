@@ -76,9 +76,39 @@ def disconnect_serial():
     return jsonify({
         "ok": True,
         "message": "USB Serial disconnected",
-        "comm_mode": current_app.extensions.get("comm_mode", "USB_SERIAL"),
+        "comm_mode": current_app.extensions.get("comm_mode", "UDP_WIFI"),
         "serial": sr.get_status(),
     })
+
+
+@telemetry_bp.post("/api/telemetry/udp/start")
+def start_udp_telemetry():
+    udp = current_app.extensions["udp_receiver"]
+    sr = current_app.extensions["serial_receiver"]
+    tm = current_app.extensions["telemetry_manager"]
+    body = request.get_json(silent=True) or {}
+    if "port" in body:
+        try:
+            new_port = int(body["port"])
+            if not (1024 <= new_port <= 65535):
+                return jsonify({"ok": False, "error": "UDP port must be between 1024 and 65535"}), 400
+            udp.port = new_port
+        except (TypeError, ValueError):
+            return jsonify({"ok": False, "error": "Invalid UDP port"}), 400
+    sr.disconnect()
+    current_app.extensions["comm_mode"] = "UDP_WIFI"
+    udp.start()
+    tm.broadcast_state()
+    return jsonify({"ok": True, "message": f"UDP telemetry listener active on port {udp.port}", "udp_port": udp.port})
+
+
+@telemetry_bp.post("/api/telemetry/udp/stop")
+def stop_udp_telemetry():
+    udp = current_app.extensions["udp_receiver"]
+    tm = current_app.extensions["telemetry_manager"]
+    udp.stop()
+    tm.mark_disconnected("UDP telemetry listener stopped by operator")
+    return jsonify({"ok": True, "message": "UDP telemetry listener stopped"})
 
 
 @telemetry_bp.get("/api/telemetry/history")

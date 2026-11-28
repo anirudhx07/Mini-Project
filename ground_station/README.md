@@ -63,7 +63,44 @@ Open **`http://127.0.0.1:5000`** in your browser.
 
 ---
 
-## 4. Running Automated Tests
+## 4. ESP32-CAM OV2640 Live Streaming Setup
+
+COCKPIT supports the **AI Thinker ESP32-CAM (OV2640)** over Wi-Fi using a low-latency raw MJPEG proxy (no decode/re-encode overhead) and automatic reconnection.
+
+### Camera Configuration (`.env` or System Settings)
+Wi-Fi credentials are **never** stored in COCKPIT. Configure only the camera's network endpoint in `ground_station/.env` or **System Settings → ESP32-CAM & Video Configuration**:
+```ini
+COCKPIT_CAMERA_SOURCE=esp32cam
+CAMERA_IP=10.159.217.26
+CAMERA_STREAM_PORT=81
+CAMERA_BASE_URL=http://10.159.217.26
+CAMERA_STREAM_URL=http://10.159.217.26:81/stream
+CAMERA_AUTO_RECONNECT=true
+CAMERA_CONNECT_TIMEOUT=4.0
+```
+*(If your mobile hotspot assigns a new IP to the ESP32-CAM, update **Camera IP Address** in System Settings and click **Test Camera Connection**.)*
+
+### ESP32-CAM VGA (640x480) Firmware
+A dedicated, separate camera sketch is provided at `firmware/esp32_cam/esp32_cam_vga/esp32_cam_vga.ino`:
+1. Copy `secrets.h.example` to `secrets.h` (ignored by Git) and enter your Wi-Fi hotspot credentials.
+2. Select **AI Thinker ESP32-CAM** with **PSRAM: Enabled** in Arduino IDE.
+3. Uses `PIXFORMAT_JPEG`, `XCLK 20MHz`, `FRAMESIZE_VGA` (640x480), `jpeg_quality = 12`, and `fb_count = 2` + `CAMERA_GRAB_LATEST` when PSRAM is detected.
+
+### Camera API Endpoints
+- `GET /api/camera/status` — Current connection state (`DISCONNECTED`, `CONNECTING`, `CONNECTED`, `STREAMING`, `RECONNECTING`, `ERROR`), IP, resolution, FPS, latency.
+- `GET /api/camera/stream` — Proxied `multipart/x-mixed-replace` MJPEG stream.
+- `POST /api/camera/start` / `POST /api/camera/stop` — Start or stop the stream loop.
+- `POST /api/camera/test` — Lightweight HTTP reachability check against `CAMERA_BASE_URL`.
+- `POST /api/camera/config` — Update camera IP, port, URL, timeout, and auto-reconnect.
+- `POST /api/camera/capture` — Save original full-resolution JPEG snapshot to `ground_station/captures/`.
+
+### Troubleshooting ESP32-CAM
+- **Camera Unreachable / Timeout:** Confirm your laptop and ESP32-CAM are on the same hotspot and verify the IP printed in Serial Monitor after flashing.
+- **Brownout / Stream Drops:** Power the ESP32-CAM from a stable 5V USB supply (`>= 1A`); low voltage causes Wi-Fi resets.
+
+---
+
+## 5. Running Automated Tests
 
 ```powershell
 cd ground_station

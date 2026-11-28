@@ -21,8 +21,8 @@ class Config:
     PORT = int(os.getenv("COCKPIT_PORT", "5000"))
     DEBUG = os.getenv("COCKPIT_DEBUG", "false").lower() == "true"
 
-    # Communication Mode ("USB_SERIAL" default | "UDP_WIFI")
-    COMM_MODE = os.getenv("COCKPIT_COMM_MODE", "USB_SERIAL").upper()
+    # Communication Mode ("UDP_WIFI" default for wireless Main ESP32 | "USB_SERIAL")
+    COMM_MODE = os.getenv("COCKPIT_COMM_MODE", "UDP_WIFI").upper()
 
     # ESP32 USB Serial Telemetry
     SERIAL_PORT = os.getenv("COCKPIT_SERIAL_PORT", "")
@@ -34,13 +34,22 @@ class Config:
     ESP32_TIMEOUT_SEC = float(os.getenv("COCKPIT_ESP32_TIMEOUT", "3.0"))
     TELEMETRY_HISTORY_SIZE = int(os.getenv("COCKPIT_TELEMETRY_HISTORY", "300"))
 
-    # Camera Settings
-    CAMERA_SOURCE = os.getenv("COCKPIT_CAMERA_SOURCE", "webcam")
+    # Camera Settings (ESP32-CAM OV2640 default, Laptop Webcam fallback)
+    CAMERA_SOURCE = os.getenv("COCKPIT_CAMERA_SOURCE", "esp32cam")
     CAMERA_INDEX = int(os.getenv("COCKPIT_CAMERA_INDEX", "0"))
     CAMERA_WIDTH = int(os.getenv("COCKPIT_CAMERA_WIDTH", "640"))
     CAMERA_HEIGHT = int(os.getenv("COCKPIT_CAMERA_HEIGHT", "480"))
     CAMERA_FPS = int(os.getenv("COCKPIT_CAMERA_FPS", "30"))
-    ESP32_CAM_URL = os.getenv("COCKPIT_ESP32_CAM_URL", "")
+    CAMERA_IP = os.getenv("CAMERA_IP", "10.159.217.26")
+    CAMERA_STREAM_PORT = int(os.getenv("CAMERA_STREAM_PORT", "81"))
+    CAMERA_BASE_URL = os.getenv("CAMERA_BASE_URL", f"http://{CAMERA_IP}")
+    CAMERA_STREAM_URL = os.getenv(
+        "CAMERA_STREAM_URL",
+        os.getenv("COCKPIT_ESP32_CAM_URL", f"http://{CAMERA_IP}:{CAMERA_STREAM_PORT}/stream"),
+    )
+    ESP32_CAM_URL = CAMERA_STREAM_URL
+    CAMERA_AUTO_RECONNECT = os.getenv("CAMERA_AUTO_RECONNECT", "true").lower() == "true"
+    CAMERA_CONNECT_TIMEOUT = float(os.getenv("CAMERA_CONNECT_TIMEOUT", "4.0"))
 
     # AI / Vision Settings
     YOLO_MODEL_PATH = os.getenv("COCKPIT_YOLO_MODEL", str(BASE_DIR / "models" / "yolov8n.pt"))

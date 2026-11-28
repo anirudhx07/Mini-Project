@@ -58,7 +58,7 @@ window.CockpitApp = {
   },
 
   async refreshSerialPorts() {
-    const sel = document.getElementById("serialPortSelect");
+    const sel = document.getElementById("camSerialPortSelect");
     if (!sel) return;
     const prev = sel.value;
     const res = await this.api("/api/serial/ports");
@@ -70,15 +70,15 @@ window.CockpitApp = {
     }
     sel.innerHTML = ports
       .map((p) => {
-        const tag = p.is_cp210x ? " [CP210x Recommended]" : "";
+        const tag = p.is_cp210x ? " [USB-UART]" : "";
         return `<option value="${this.escapeHtml(p.device)}">${this.escapeHtml(p.device)} — ${this.escapeHtml(p.description)}${tag}</option>`;
       })
       .join("");
     if (prev && ports.some((p) => p.device === prev)) {
       sel.value = prev;
     } else {
-      const rec = ports.find((p) => p.recommended);
-      if (rec) sel.value = rec.device;
+      const usbPort = ports.find((p) => p.recommended || !p.description.toLowerCase().includes("bluetooth"));
+      if (usbPort) sel.value = usbPort.device;
     }
   },
 
@@ -124,7 +124,7 @@ window.CockpitApp = {
     }
 
     if (window.CockpitTelemetry) window.CockpitTelemetry.applyState(res.telemetry, res.serial, commMode);
-    if (window.CockpitCamera) window.CockpitCamera.applyStatus(res.camera);
+    if (window.CockpitCamera) window.CockpitCamera.applyStatus(res.camera, res.cam_serial);
     if (window.CockpitDetection) window.CockpitDetection.applyStatus(res.detection);
     if (window.CockpitTracking) window.CockpitTracking.applyStatus(res.tracking);
     if (window.CockpitCamouflage) window.CockpitCamouflage.applyStatus(res.camouflage);
@@ -227,6 +227,17 @@ window.CockpitApp = {
     document.getElementById("setDbPath").textContent = st.database_path;
     document.getElementById("setCpuPct").textContent = `${sys.cpu_percent}%`;
     document.getElementById("setMemPct").textContent = `${sys.memory_percent}% (${sys.memory_used_gb}/${sys.memory_total_gb} GB)`;
+
+    if (res.camera) {
+      const cam = res.camera;
+      if (document.getElementById("setCamSource")) document.getElementById("setCamSource").value = cam.source_type || "esp32cam";
+      if (document.getElementById("camSourceSelect")) document.getElementById("camSourceSelect").value = cam.source_type || "esp32cam";
+      if (document.getElementById("setCamIp")) document.getElementById("setCamIp").value = cam.camera_ip || "";
+      if (document.getElementById("setCamPort")) document.getElementById("setCamPort").value = cam.stream_port || 81;
+      if (document.getElementById("setEsp32CamUrl")) document.getElementById("setEsp32CamUrl").value = cam.esp32_cam_url || "";
+      if (document.getElementById("setCamTimeout")) document.getElementById("setCamTimeout").value = cam.connect_timeout || 4.0;
+      if (document.getElementById("setCamAutoReconnect")) document.getElementById("setCamAutoReconnect").value = String(Boolean(cam.auto_reconnect));
+    }
   },
 
   init() {
@@ -267,7 +278,12 @@ window.CockpitApp = {
         model_path: document.getElementById("setModelPath").value,
         ai_device: document.getElementById("setAiDevice").value,
         frame_skip: parseInt(document.getElementById("setFrameSkip").value, 10),
-        esp32_cam_url: document.getElementById("setEsp32CamUrl").value,
+        camera_source: document.getElementById("setCamSource")?.value || "esp32cam",
+        camera_ip: document.getElementById("setCamIp")?.value.trim(),
+        stream_port: parseInt(document.getElementById("setCamPort")?.value || "81", 10),
+        esp32_cam_url: document.getElementById("setEsp32CamUrl")?.value.trim(),
+        connect_timeout: parseFloat(document.getElementById("setCamTimeout")?.value || "4.0"),
+        auto_reconnect: document.getElementById("setCamAutoReconnect")?.value === "true",
       };
       const res = await this.api("/api/settings", { method: "POST", body: JSON.stringify(payload) });
       if (res.ok) {
@@ -278,35 +294,91 @@ window.CockpitApp = {
       }
     });
 
-    // USB Serial Controls
-    document.getElementById("btnSerialRefresh")?.addEventListener("click", () => {
-      this.refreshSerialPorts();
-      this.toast("Serial ports refreshed", "info");
+    // Keep Camera IP / Port synced with Stream URL input when user edits IP or Port
+    const syncCamUrl = () => {
+      const ip = document.getElementById("setCamIp")?.value.trim();
+      const port = document.getElementById("setCamPort")?.value.trim() || "81";
+      const urlEl = document.getElementById("setEsp32CamUrl");
+      if (ip && urlEl) {
+        urlEl.value = `http://${ip}:${port}/stream`;
+      }
+    };
+    document.getElementById("setCamIp")?.addEventListener("input", syncCamUrl);
+    document.getElementById("setCamPort")?.addEventListener("input", syncCamUrl);
+
+    // Test Camera Connection
+    document.getElementById("btnTestCamConn")?.addEventListener("click", async () => {
+      const badge = document.getElementById("setCamTestBadge");
+      const resEl = document.getElementById("setCamTestResult");
+      if (badge) { badge.textContent = "TESTING..."; badge.className = "badge badge-warning mono"; }
+      const payload = {
+        source_type: document.getElementById("setCamSource")?.value || "esp32cam",
+        camera_ip: document.getElementById("setCamIp")?.value.trim(),
+        stream_port: parseInt(document.getElementById("setCamPort")?.value || "81", 10),
+        esp32_cam_url: document.getElementById("setEsp32CamUrl")?.value.trim(),
+        connect_timeout: parseFloat(document.getElementById("setCamTimeout")?.value || "4.0"),
+      };
+      const res = await this.api("/api/camera/test", { method: "POST", body: JSON.stringify(payload) });
+      if (badge) {
+        badge.textContent = res.ok ? "REACHABLE" : "UNREACHABLE";
+        badge.className = res.ok ? "badge badge-success mono" : "badge badge-critical mono";
+      }
+      if (resEl) {
+        resEl.textContent = res.message || res.error || "--";
+        resEl.className = res.ok ? "mono text-success" : "mono text-critical";
+      }
+      this.toast(res.message || res.error, res.ok ? "success" : "error");
     });
 
-    document.getElementById("btnSerialConnect")?.addEventListener("click", async () => {
-      const port = document.getElementById("serialPortSelect")?.value || "";
-      const baudrate = parseInt(document.getElementById("serialBaudSelect")?.value || "115200", 10);
+    // Section A: UDP Flight Controller Connect / Disconnect
+    document.getElementById("btnUdpStart")?.addEventListener("click", async () => {
+      const port = parseInt(document.getElementById("setUdpPort")?.value || "4210", 10);
+      const res = await this.api("/api/telemetry/udp/start", {
+        method: "POST",
+        body: JSON.stringify({ port }),
+      });
+      this.toast(res.ok ? res.message : res.error, res.ok ? "success" : "error");
+      this.refreshStatus();
+    });
+
+    document.getElementById("btnUdpStop")?.addEventListener("click", async () => {
+      const res = await this.api("/api/telemetry/udp/stop", { method: "POST", body: JSON.stringify({}) });
+      this.toast(res.message || "UDP stopped", "info");
+      this.refreshStatus();
+    });
+
+    // Section B: ESP32-CAM USB Serial & Stream Controls
+    document.getElementById("btnCamSerialRefresh")?.addEventListener("click", () => {
+      this.refreshSerialPorts();
+      this.toast("COM ports refreshed", "info");
+    });
+
+    document.getElementById("btnCamSerialConnect")?.addEventListener("click", async () => {
+      const port = document.getElementById("camSerialPortSelect")?.value || "";
+      const baudrate = parseInt(document.getElementById("camSerialBaudSelect")?.value || "115200", 10);
       if (!port) {
         this.toast("Select a COM port first", "error");
         return;
       }
-      const res = await this.api("/api/serial/connect", {
+      const res = await this.api("/api/camera/serial/connect", {
         method: "POST",
         body: JSON.stringify({ port, baudrate }),
       });
-      if (res.ok) {
-        this.toast(res.message, "success");
-      } else {
-        this.toast(res.message || res.error || "Serial connect failed", "error");
-      }
+      this.toast(res.message || res.error, res.ok ? "success" : "error");
       this.refreshStatus();
     });
 
-    document.getElementById("btnSerialDisconnect")?.addEventListener("click", async () => {
-      const res = await this.api("/api/serial/disconnect", { method: "POST" });
-      this.toast(res.message || "Serial disconnected", "info");
+    document.getElementById("btnCamSerialDisconnect")?.addEventListener("click", async () => {
+      const res = await this.api("/api/camera/serial/disconnect", { method: "POST" });
+      this.toast(res.message || "ESP32-CAM USB disconnected", "info");
       this.refreshStatus();
+    });
+
+    document.getElementById("btnSetCamStart")?.addEventListener("click", () => {
+      if (window.CockpitCamera) window.CockpitCamera.startStream();
+    });
+    document.getElementById("btnSetCamStop")?.addEventListener("click", () => {
+      if (window.CockpitCamera) window.CockpitCamera.stopStream();
     });
 
     // WebSocket setup

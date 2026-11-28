@@ -15,8 +15,9 @@ def overall_status():
     camo = current_app.extensions["camouflage_analyzer"]
     udp = current_app.extensions["udp_receiver"]
     sr = current_app.extensions["serial_receiver"]
+    csm = current_app.extensions["cam_serial_monitor"]
     mon = current_app.extensions["system_monitor"]
-    comm_mode = current_app.extensions.get("comm_mode", "USB_SERIAL")
+    comm_mode = current_app.extensions.get("comm_mode", "UDP_WIFI")
 
     tel_state = tm.get_state()
     tel_state["comm_mode"] = comm_mode
@@ -27,6 +28,7 @@ def overall_status():
         "backend": "ONLINE",
         "comm_mode": comm_mode,
         "serial": sr.get_status(),
+        "cam_serial": csm.get_status(),
         "udp_listening": udp.is_running(),
         "udp_port": udp.port,
         "telemetry": tel_state,
@@ -52,6 +54,7 @@ def system_info():
         "ok": True,
         "comm_mode": comm_mode,
         "serial": sr.get_status(),
+        "cam_serial": current_app.extensions["cam_serial_monitor"].get_status(),
         "system": mon.get_info(),
         "network": {
             "udp_host": udp.host,
@@ -60,6 +63,7 @@ def system_info():
             "esp32_timeout_sec": tm.timeout_sec,
             "history_size": tm.history_size,
         },
+        "camera": cm.get_status(),
         "storage": {
             "captures_dir": str(cm.captures_dir),
             "database_path": str(current_app.extensions["event_logger"].db_path),
@@ -159,7 +163,11 @@ def update_settings():
             tm.set_timeout(float(body["esp32_timeout_sec"]))
         if "history_size" in body:
             tm.set_history_size(int(body["history_size"]))
-        if any(k in body for k in ("camera_source", "camera_index", "camera_width", "camera_height", "camera_fps", "esp32_cam_url")):
+        if any(k in body for k in (
+            "camera_source", "camera_index", "camera_width", "camera_height",
+            "camera_fps", "esp32_cam_url", "camera_ip", "stream_port",
+            "auto_reconnect", "connect_timeout",
+        )):
             cm.configure(
                 source_type=body.get("camera_source"),
                 camera_index=body.get("camera_index"),
@@ -167,6 +175,10 @@ def update_settings():
                 height=body.get("camera_height"),
                 target_fps=body.get("camera_fps"),
                 esp32_cam_url=body.get("esp32_cam_url"),
+                camera_ip=body.get("camera_ip"),
+                stream_port=body.get("stream_port"),
+                auto_reconnect=body.get("auto_reconnect"),
+                connect_timeout=body.get("connect_timeout"),
             )
         if any(k in body for k in ("model_path", "confidence", "ai_device", "frame_skip")):
             det.configure(

@@ -12,6 +12,7 @@ from backend.telemetry.udp_receiver import UDPTelemetryReceiver
 from backend.telemetry.serial_receiver import SerialTelemetryReceiver
 from backend.telemetry.simulator import TelemetrySimulator
 from backend.camera.camera_manager import CameraManager
+from backend.camera.cam_serial import CamSerialMonitor
 from backend.vision.detection import DetectionEngine
 from backend.vision.tracking import TrackingEngine
 from backend.vision.camouflage import CamouflageAnalyzer
@@ -67,6 +68,11 @@ def create_app(start_background: bool = True, config_cls=Config) -> Flask:
         height=config_cls.CAMERA_HEIGHT,
         target_fps=config_cls.CAMERA_FPS,
         esp32_cam_url=config_cls.ESP32_CAM_URL,
+        camera_ip=config_cls.CAMERA_IP,
+        stream_port=config_cls.CAMERA_STREAM_PORT,
+        base_url=config_cls.CAMERA_BASE_URL,
+        auto_reconnect=config_cls.CAMERA_AUTO_RECONNECT,
+        connect_timeout=config_cls.CAMERA_CONNECT_TIMEOUT,
         event_logger=event_logger,
     )
     detection_engine = DetectionEngine(
@@ -98,13 +104,15 @@ def create_app(start_background: bool = True, config_cls=Config) -> Flask:
     app.extensions["telemetry_manager"] = telemetry_manager
     app.extensions["udp_receiver"] = udp_receiver
     app.extensions["serial_receiver"] = serial_receiver
-    app.extensions["comm_mode"] = config_cls.COMM_MODE if config_cls.COMM_MODE in ("USB_SERIAL", "UDP_WIFI") else "USB_SERIAL"
+    app.extensions["comm_mode"] = config_cls.COMM_MODE if config_cls.COMM_MODE in ("USB_SERIAL", "UDP_WIFI") else "UDP_WIFI"
     telemetry_manager.set_serial_provider(
         serial_receiver.get_status,
-        lambda: app.extensions.get("comm_mode", "USB_SERIAL"),
+        lambda: app.extensions.get("comm_mode", "UDP_WIFI"),
     )
     app.extensions["telemetry_simulator"] = telemetry_simulator
     app.extensions["camera_manager"] = camera_manager
+    cam_serial_monitor = CamSerialMonitor(default_baudrate=config_cls.SERIAL_BAUDRATE, event_logger=event_logger)
+    app.extensions["cam_serial_monitor"] = cam_serial_monitor
     app.extensions["detection_engine"] = detection_engine
     app.extensions["tracking_engine"] = tracking_engine
     app.extensions["camouflage_analyzer"] = camouflage_analyzer
@@ -128,6 +136,7 @@ def create_app(start_background: bool = True, config_cls=Config) -> Flask:
         detection_engine.stop()
         tracking_engine.stop()
         camera_manager.stop()
+        cam_serial_monitor.disconnect()
         serial_receiver.disconnect()
         udp_receiver.stop()
 

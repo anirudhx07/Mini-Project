@@ -95,22 +95,23 @@
           </div>
           <div class="status-pill" id="pillEsp32">
             <span class="dot dot-warn" id="dotEsp32"></span>
-            <span class="pill-label">ESP32 USB</span>
-            <span class="pill-val" id="topEsp32Status">DISCONNECTED</span>
-          </div>
-          <div class="status-pill" id="pillPort">
-            <span class="pill-label">PORT</span>
-            <span class="pill-val" id="topPortStatus">--</span>
+            <span class="pill-label">ESP32 WIFI</span>
+            <span class="pill-val" id="topEsp32Status">WAITING</span>
           </div>
           <div class="status-pill" id="pillMpu">
             <span class="dot dot-warn" id="dotMpu"></span>
             <span class="pill-label">MPU6050</span>
             <span class="pill-val" id="topMpuStatus">WAITING</span>
           </div>
+          <div class="status-pill" id="pillCamUsb">
+            <span class="dot dot-muted" id="dotCamUsb"></span>
+            <span class="pill-label">CAM USB</span>
+            <span class="pill-val" id="topCamUsbStatus">DISCONNECTED</span>
+          </div>
           <div class="status-pill" id="pillCamera">
             <span class="dot dot-muted" id="dotCamera"></span>
             <span class="pill-label">CAM</span>
-            <span class="pill-val" id="topCamStatus">STOPPED</span>
+            <span class="pill-val" id="topCamStatus">DISCONNECTED</span>
           </div>
           <div class="status-pill" id="pillAI">
             <span class="dot dot-muted" id="dotAI"></span>
@@ -287,51 +288,65 @@
             <div class="toolbar-group">
               <label class="field-inline">Source
                 <select id="camSourceSelect" class="input">
+                  <option value="esp32cam">ESP32-CAM OV2640 (Wi-Fi)</option>
                   <option value="webcam">Laptop Webcam</option>
-                  <option value="esp32cam">ESP32-CAM Stream (Future)</option>
                 </select>
               </label>
-              <label class="field-inline">Index
-                <input type="number" id="camIndexInput" class="input input-sm" value="0" min="0" max="10" />
-              </label>
-              <label class="field-inline">Resolution
-                <select id="camResSelect" class="input">
-                  <option value="640x480">640x480</option>
-                  <option value="1280x720">1280x720</option>
-                  <option value="320x240">320x240</option>
-                </select>
-              </label>
-              <label class="field-inline">FPS
-                <input type="number" id="camFpsInput" class="input input-sm" value="30" min="1" max="60" />
-              </label>
+              <span class="badge badge-muted mono" id="camStateBadge">DISCONNECTED</span>
+              <span class="badge badge-info mono" id="camResBadge">640x480</span>
+              <span class="badge badge-muted mono" id="camLatencyBadge">-- ms</span>
+              <span class="mono text-muted" id="camFeedMeta">0 FPS</span>
             </div>
             <div class="toolbar-group">
-              <button class="btn btn-primary" id="btnCamStart"><i data-lucide="play"></i> Start Camera</button>
-              <button class="btn btn-danger" id="btnCamStop"><i data-lucide="square"></i> Stop Camera</button>
-              <button class="btn btn-secondary" id="btnCamCapture"><i data-lucide="camera"></i> Capture Frame</button>
+              <button class="btn btn-primary" id="btnCamStart"><i data-lucide="play"></i> Start Stream</button>
+              <button class="btn btn-danger" id="btnCamStop"><i data-lucide="square"></i> Stop Stream</button>
+              <button class="btn btn-secondary" id="btnCamRefresh"><i data-lucide="refresh-cw"></i> Refresh Connection</button>
+              <button class="btn btn-secondary" id="btnCamCapture"><i data-lucide="camera"></i> Capture Snapshot</button>
+              <button class="btn btn-secondary" id="btnCamFullscreen"><i data-lucide="maximize-2"></i> Fullscreen</button>
             </div>
           </div>
 
-          <div class="grid-2-asym">
-            <div class="panel">
+          <div class="grid-camera-main">
+            <div class="panel camera-stage-panel">
               <div class="panel-header">
-                <span class="panel-title"><i data-lucide="video"></i> Live Optical Feed</span>
-                <span class="mono text-muted" id="camFeedMeta">STOPPED • 0 FPS</span>
+                <span class="panel-title"><i data-lucide="video"></i> Live Optical Feed — <span id="camStageTitle">ESP32-CAM OV2640</span></span>
+                <span class="mono text-warning hidden" id="camErrorNotice"></span>
               </div>
-              <div class="video-frame-box large-preview">
+              <div class="video-frame-box camera-hero-box" id="camVideoContainer">
                 <img id="camLiveImg" class="video-feed hidden" alt="Live Camera Stream" />
+                <button class="btn btn-secondary fullscreen-exit-btn hidden" id="btnCamExitFullscreen">
+                  <i data-lucide="minimize-2"></i> Exit Fullscreen (Esc)
+                </button>
                 <div class="video-placeholder" id="camLivePlaceholder">
                   <i data-lucide="video-off"></i>
-                  <span>Click "Start Camera" to initialize video stream</span>
+                  <span id="camPlaceholderText">ESP32-CAM disconnected — Click "Start Stream" to connect</span>
                 </div>
               </div>
             </div>
-            <div class="panel">
-              <div class="panel-header">
-                <span class="panel-title"><i data-lucide="image"></i> Latest Snapshot</span>
+
+            <div class="camera-side-col">
+              <div class="panel">
+                <div class="panel-header">
+                  <span class="panel-title"><i data-lucide="info"></i> Camera Information</span>
+                </div>
+                <div class="status-grid">
+                  <div class="kv-row"><span>Camera Name</span><strong class="mono" id="camInfoName">ESP32-CAM OV2640</strong></div>
+                  <div class="kv-row"><span>Camera IP</span><strong class="mono" id="camInfoIp">10.159.217.26</strong></div>
+                  <div class="kv-row"><span>Connection Status</span><strong class="mono" id="camInfoConn">DISCONNECTED</strong></div>
+                  <div class="kv-row"><span>Streaming Status</span><strong class="mono" id="camInfoStream">INACTIVE</strong></div>
+                  <div class="kv-row"><span>Resolution</span><strong class="mono" id="camInfoRes">Unknown</strong></div>
+                  <div class="kv-row"><span>Stream Endpoint</span><strong class="mono" id="camInfoUrl" style="font-size:11px;">--</strong></div>
+                  <div class="kv-row"><span>Last Connected</span><strong class="mono" id="camInfoLastConn">--</strong></div>
+                </div>
               </div>
-              <div class="snapshot-box" id="camSnapshotBox">
-                <span class="text-muted">No snapshot captured in this session</span>
+
+              <div class="panel">
+                <div class="panel-header">
+                  <span class="panel-title"><i data-lucide="image"></i> Latest Snapshot</span>
+                </div>
+                <div class="snapshot-box" id="camSnapshotBox">
+                  <span class="text-muted">No snapshot captured in this session</span>
+                </div>
               </div>
             </div>
           </div>
@@ -508,60 +523,109 @@
         <!-- 8. SYSTEM SETTINGS VIEW -->
         <section class="view-section" id="view-settings">
           <div class="grid-2">
+            <!-- SECTION A: FLIGHT CONTROLLER (MAIN ESP32 + MPU6050) -->
             <div class="panel">
               <div class="panel-header">
-                <span class="panel-title"><i data-lucide="usb"></i> USB Serial Connection (ESP32)</span>
-                <span class="badge badge-muted mono" id="serialConnBadge">DISCONNECTED</span>
+                <span class="panel-title"><i data-lucide="wifi"></i> Section A: Flight Controller (Main ESP32)</span>
+                <span class="badge badge-muted mono" id="setFcConnBadge">WAITING_FOR_DATA</span>
               </div>
               <div class="form-stack">
-                <label class="form-field">Available COM Ports
-                  <div class="btn-row">
-                    <select id="serialPortSelect" class="input" style="flex: 1;"></select>
-                    <button class="btn btn-secondary" id="btnSerialRefresh"><i data-lucide="refresh-cw"></i> Refresh Ports</button>
-                  </div>
-                </label>
-                <label class="form-field">Baud Rate
-                  <select id="serialBaudSelect" class="input">
-                    <option value="9600">9600</option>
-                    <option value="57600">57600</option>
-                    <option value="115200" selected>115200 (Default)</option>
-                    <option value="230400">230400</option>
-                    <option value="460800">460800</option>
-                    <option value="921600">921600</option>
+                <label class="form-field">Communication Mode
+                  <select id="setCommMode" class="input">
+                    <option value="UDP_WIFI" selected>UDP_WIFI (Default — Wireless Hotspot)</option>
+                    <option value="USB_SERIAL">USB_SERIAL (Fallback Cable)</option>
                   </select>
                 </label>
-                <div class="btn-row">
-                  <button class="btn btn-primary" id="btnSerialConnect"><i data-lucide="plug"></i> Connect</button>
-                  <button class="btn btn-danger" id="btnSerialDisconnect"><i data-lucide="unplug"></i> Disconnect</button>
+                <div class="kv-row"><span>Laptop Local IP</span><strong class="mono" id="setLocalIp">--</strong></div>
+                <div class="kv-row"><span>Main ESP32 IP</span><strong class="mono" id="setFcEsp32Ip">--</strong></div>
+                <div class="kv-row"><span>Last Telemetry Packet</span><strong class="mono" id="setFcLastPkt">--</strong></div>
+                <div class="grid-2" style="gap:8px;">
+                  <label class="form-field">UDP Receiving Port
+                    <input type="number" id="setUdpPort" class="input" value="4210" />
+                  </label>
+                  <label class="form-field">ESP32 Timeout (sec)
+                    <input type="number" id="setTimeout" class="input" value="3.0" step="0.5" min="0.5" />
+                  </label>
                 </div>
-                <div class="kv-row"><span>Last Received Packet</span><strong class="mono" id="serialLastPkt">--</strong></div>
-                <div class="kv-row"><span>Serial Status / Error</span><strong class="mono text-warning" id="serialErrorText">None</strong></div>
-                <div class="notice-bar">
-                  <i data-lucide="info"></i>
-                  <span>Close Arduino Serial Monitor or other COM tools before connecting COCKPIT on Windows.</span>
+                <label class="form-field">Telemetry History Buffer Size
+                  <input type="number" id="setHistorySize" class="input" value="300" min="50" max="2000" />
+                </label>
+                <div class="btn-row">
+                  <button class="btn btn-primary" id="btnUdpStart"><i data-lucide="play"></i> Connect UDP</button>
+                  <button class="btn btn-danger" id="btnUdpStop"><i data-lucide="square"></i> Disconnect UDP</button>
                 </div>
               </div>
             </div>
 
+            <!-- SECTION B: ESP32-CAM (USB SERIAL + WI-FI STREAM) -->
             <div class="panel">
-              <div class="panel-header"><span class="panel-title"><i data-lucide="wifi"></i> Telemetry Mode &amp; UDP Network</span></div>
+              <div class="panel-header">
+                <span class="panel-title"><i data-lucide="camera"></i> Section B: ESP32-CAM (OV2640 &amp; USB)</span>
+                <span class="badge badge-muted mono" id="setCamStreamBadge">DISCONNECTED</span>
+              </div>
               <div class="form-stack">
-                <label class="form-field">Communication Mode
-                  <select id="setCommMode" class="input">
-                    <option value="USB_SERIAL">USB_SERIAL (Default — Direct Cable)</option>
-                    <option value="UDP_WIFI">UDP_WIFI (Wireless Network)</option>
-                  </select>
+                <div class="kv-row">
+                  <span>USB Serial Status</span>
+                  <strong class="badge badge-muted mono" id="camSerialConnBadge">DISCONNECTED</strong>
+                </div>
+                <label class="form-field">ESP32-CAM COM Port
+                  <div class="btn-row">
+                    <select id="camSerialPortSelect" class="input" style="flex: 1;"></select>
+                    <button class="btn btn-secondary" id="btnCamSerialRefresh"><i data-lucide="refresh-cw"></i> Refresh COM Ports</button>
+                  </div>
                 </label>
-                <div class="kv-row"><span>Laptop Local IP</span><strong class="mono" id="setLocalIp">--</strong></div>
-                <label class="form-field">UDP Receiving Port
-                  <input type="number" id="setUdpPort" class="input" value="4210" />
+                <div class="grid-2" style="gap:8px;">
+                  <label class="form-field">Baud Rate
+                    <select id="camSerialBaudSelect" class="input">
+                      <option value="9600">9600</option>
+                      <option value="57600">57600</option>
+                      <option value="115200" selected>115200 (Default)</option>
+                      <option value="230400">230400</option>
+                      <option value="460800">460800</option>
+                      <option value="921600">921600</option>
+                    </select>
+                  </label>
+                  <label class="form-field">Camera Source
+                    <select id="setCamSource" class="input">
+                      <option value="esp32cam">ESP32-CAM OV2640 (Wi-Fi)</option>
+                      <option value="webcam">Laptop Webcam</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="btn-row">
+                  <button class="btn btn-secondary" id="btnCamSerialConnect"><i data-lucide="usb"></i> Connect USB</button>
+                  <button class="btn btn-secondary" id="btnCamSerialDisconnect"><i data-lucide="unplug"></i> Disconnect USB</button>
+                </div>
+                <div class="kv-row"><span>USB Serial Output</span><strong class="mono text-muted" id="camSerialLastLine" style="font-size:11px;">--</strong></div>
+
+                <div class="grid-2" style="gap:8px;">
+                  <label class="form-field">Camera IP Address
+                    <input type="text" id="setCamIp" class="input" value="10.159.217.26" placeholder="10.159.217.26" />
+                  </label>
+                  <label class="form-field">Stream Port
+                    <input type="number" id="setCamPort" class="input" value="81" min="1" max="65535" />
+                  </label>
+                </div>
+                <label class="form-field">Camera Stream URL
+                  <input type="text" id="setEsp32CamUrl" class="input" value="http://10.159.217.26:81/stream" placeholder="http://10.159.217.26:81/stream" />
                 </label>
-                <label class="form-field">ESP32 Timeout (seconds)
-                  <input type="number" id="setTimeout" class="input" value="3.0" step="0.5" min="0.5" />
-                </label>
-                <label class="form-field">Telemetry History Buffer Size
-                  <input type="number" id="setHistorySize" class="input" value="300" min="50" max="2000" />
-                </label>
+                <div class="grid-2" style="gap:8px;">
+                  <label class="form-field">Connection Timeout (sec)
+                    <input type="number" id="setCamTimeout" class="input" value="4.0" step="0.5" min="1" max="30" />
+                  </label>
+                  <label class="form-field">Auto-Reconnect
+                    <select id="setCamAutoReconnect" class="input">
+                      <option value="true">Enabled</option>
+                      <option value="false">Disabled</option>
+                    </select>
+                  </label>
+                </div>
+                <div class="btn-row">
+                  <button class="btn btn-primary" id="btnSetCamStart"><i data-lucide="play"></i> Start Stream</button>
+                  <button class="btn btn-danger" id="btnSetCamStop"><i data-lucide="square"></i> Stop Stream</button>
+                  <button class="btn btn-secondary" id="btnTestCamConn"><i data-lucide="activity"></i> Test Camera Connection</button>
+                </div>
+                <div class="kv-row"><span>Camera Probe Result</span><strong class="mono text-muted" id="setCamTestResult">--</strong></div>
               </div>
             </div>
 
@@ -583,6 +647,10 @@
                 <label class="form-field">Inference Frame Skip
                   <input type="number" id="setFrameSkip" class="input" value="1" min="1" max="10" />
                 </label>
+                <div class="btn-row">
+                  <button class="btn btn-primary" id="btnSaveSettings"><i data-lucide="save"></i> Apply All Settings</button>
+                  <button class="btn btn-warning" id="btnToggleDemoSettings"><i data-lucide="flask-conical"></i> Toggle Demo Mode</button>
+                </div>
               </div>
             </div>
 
@@ -594,19 +662,6 @@
                 <div class="kv-row"><span>CPU Utilization</span><strong class="mono" id="setCpuPct">--%</strong></div>
                 <div class="kv-row"><span>Memory Usage</span><strong class="mono" id="setMemPct">--%</strong></div>
                 <div class="kv-row"><span>WebSocket Link</span><strong class="mono" id="setWsStatus">CONNECTING</strong></div>
-              </div>
-            </div>
-
-            <div class="panel">
-              <div class="panel-header"><span class="panel-title"><i data-lucide="sliders"></i> Application &amp; Mode Control</span></div>
-              <div class="form-stack">
-                <div class="kv-row"><span>Active Theme</span><strong class="mono">Dark Aerospace (#080D16)</strong></div>
-                <div class="kv-row"><span>ESP32-CAM Stream URL (Future)</span></div>
-                <input type="text" id="setEsp32CamUrl" class="input" placeholder="http://192.168.x.x:81/stream" />
-                <div class="btn-row">
-                  <button class="btn btn-primary" id="btnSaveSettings"><i data-lucide="save"></i> Apply Settings</button>
-                  <button class="btn btn-warning" id="btnToggleDemoSettings"><i data-lucide="flask-conical"></i> Toggle Demo Mode</button>
-                </div>
               </div>
             </div>
           </div>

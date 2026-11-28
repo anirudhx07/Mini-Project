@@ -29,7 +29,9 @@ def test_telemetry_and_status_api():
     data = resp.get_json()
     assert data["ok"] is True
     assert data["app"] == "COCKPIT"
-    assert data["comm_mode"] == "USB_SERIAL"
+    assert data["comm_mode"] == "UDP_WIFI"
+    assert "cam_serial" in data
+    assert data["cam_serial"]["connected"] is False
     assert data["telemetry"]["demo_mode"] is False
 
     resp_tel = client.get("/api/telemetry")
@@ -57,6 +59,51 @@ def test_serial_api_endpoints():
 
     r_disc = client.post("/api/serial/disconnect")
     assert r_disc.status_code == 200
+
+
+def test_camera_config_and_test_endpoints():
+    app, client = _make_client()
+    r_bad = client.post("/api/camera/config", json={"esp32_cam_url": "invalid-url"})
+    assert r_bad.status_code == 400
+
+    r_ok = client.post("/api/camera/config", json={
+        "source_type": "esp32cam",
+        "camera_ip": "10.159.217.26",
+        "stream_port": 81,
+        "connect_timeout": 1.0,
+    })
+    assert r_ok.status_code == 200
+    assert r_ok.get_json()["camera"]["esp32_cam_url"] == "http://10.159.217.26:81/stream"
+
+    # Unreachable test endpoint returns 503 cleanly without crashing Flask
+    r_probe = client.post("/api/camera/test", json={
+        "source_type": "esp32cam",
+        "esp32_cam_url": "http://127.0.0.1:59999/stream",
+        "connect_timeout": 1.0,
+    })
+    assert r_probe.status_code == 503
+    assert r_probe.get_json()["ok"] is False
+
+
+def test_cam_serial_and_udp_control_endpoints():
+    app, client = _make_client()
+    r_cs = client.get("/api/camera/serial/status")
+    assert r_cs.status_code == 200
+    assert r_cs.get_json()["cam_serial"]["connected"] is False
+
+    r_bad_cs = client.post("/api/camera/serial/connect", json={"port": ""})
+    assert r_bad_cs.status_code == 400
+
+    r_unavail_cs = client.post("/api/camera/serial/connect", json={"port": "COM250", "baudrate": 115200})
+    assert r_unavail_cs.status_code == 409
+
+    r_disc_cs = client.post("/api/camera/serial/disconnect")
+    assert r_disc_cs.status_code == 200
+
+    r_udp_start = client.post("/api/telemetry/udp/start", json={"port": 4210})
+    assert r_udp_start.status_code == 200
+    r_udp_stop = client.post("/api/telemetry/udp/stop", json={})
+    assert r_udp_stop.status_code == 200
 
 
 def test_ai_model_unavailable_handling():
