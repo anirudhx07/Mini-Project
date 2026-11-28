@@ -1,0 +1,11 @@
+run_id,date,laptop,device,power_state,model,heatmap,source,frames_total,warmup_excluded,benchmarked,latency_ms,inference_fps,capture_fps,dropped_pct,note
+1,2026-11-25,Pushkar,CPU Intel64 Family 6 Model 183 Stepping 1,battery (mode not recorded),camouflage,off,test.mp4,150,10,140,239.6,4.2,n/a,0.0,first run; 5 FPS check showed FAIL
+2,2026-11-25,Pushkar,CPU Intel64 Family 6 Model 183 Stepping 1,plugged in (mode not recorded),camouflage,off,test.mp4,150,10,140,57.6,17.4,n/a,0.0,
+3,2026-11-25,Pushkar,CPU Intel64 Family 6 Model 183 Stepping 1,plugged in + Best performance,camouflage,off,test.mp4,150,10,140,31.2,32.0,n/a,0.0,
+4,2026-11-25,Pushkar,CPU Intel64 Family 6 Model 183 Stepping 1,plugged in + Best performance,camouflage,on,test.mp4,150,10,140,32.5,30.8,n/a,0.0,single-pass heatmap
+5,2026-11-25,Pushkar,CPU Intel64 Family 6 Model 183 Stepping 1,plugged in + Best performance,person (YOLOv8n),off,webcam 0,874,10,864,14.2,70.5,30.0,0.0,live webcam; capture FPS limits the real rate
+6,2026-11-25,Pushkar,CPU Intel64 Family 6 Model 183 Stepping 1,battery + Eco,camouflage,on,test.mp4,150,10,140,162.5,6.2,n/a,0.0,
+7,2026-11-25,Pushkar,CPU Intel64 Family 6 Model 183 Stepping 1,battery + Eco,person (YOLOv8n),off,webcam 0,248,10,238,59.6,16.8,14.7,0.0,live webcam
+8,(not dated),Priyanshu,CPU Intel64 Family 6 Model 191 Stepping 2,not stated,camouflage,off,test.mp4,150,10,140,58.1,17.2,n/a,0.0,taken from Priyanshu's VISION_README; not re-measured by Pushkar
+9,(not dated),Priyanshu,CPU Intel64 Family 6 Model 191 Stepping 2,not stated,camouflage,on,test.mp4,150,10,140,57.5,17.4,n/a,0.0,taken from Priyanshu's VISION_README; not re-measured by Pushkar
+10,(not dated),Priyanshu,CPU Intel64 Family 6 Model 191 Stepping 2,not stated,person (YOLOv8n),off,test.mp4,150,10,140,28.2,35.5,n/a,0.0,taken from Priyanshu's VISION_README; not re-measured by Pushkar
